@@ -4,18 +4,9 @@
 class ProxyGui
 {
 public:
-	ProxyGui(Proxy& proxy);
+	ProxyGui();
 	~ProxyGui();
 
 private:
-	Proxy m_proxy;
+
 };
-
-ProxyGui::ProxyGui(Proxy& proxy)
-{
-	m_proxy = proxy;
-}
-
-ProxyGui::~ProxyGui()
-{
-}

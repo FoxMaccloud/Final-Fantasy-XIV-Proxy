@@ -26,3 +26,12 @@ void Gui::Render()
 {
     ExampleWindow();
 }
+
+Gui::Gui()
+{
+    m_proxy = std::make_unique<Proxy>();
+}
+
+Gui::~Gui()
+{
+}

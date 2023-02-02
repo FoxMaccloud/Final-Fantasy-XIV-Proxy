@@ -1,5 +1,7 @@
 #include "Overlay.hpp"
 
+static std::unique_ptr<Gui> g_gui;
+
 static HWND g_hwnd = NULL;
 static ID3D11Device* g_pd3dDevice = NULL;
 static ID3D11DeviceContext* g_pd3dDeviceContext = NULL;
@@ -91,7 +93,7 @@ static void CreateRenderTarget(IDXGISwapChain* pSwapChain)
     }
 }
 
-static void RenderImGui(IDXGISwapChain* pSwapChain)
+void RenderImGui(IDXGISwapChain* pSwapChain)
 {
     if (!ImGui::GetIO().BackendRendererUserData)
     {
@@ -112,11 +114,11 @@ static void RenderImGui(IDXGISwapChain* pSwapChain)
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
-        
+
         /* RENDER FUNC */
         if (g_showMenu)
         {
-            Gui::Render();
+            g_gui->Render();
         }
 
         ImGui::Render();
@@ -335,6 +337,8 @@ Overlay::Overlay()
         MH_EnableHook(fnResizeBuffers1);
 
         oWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtr(g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WndProc)));
+
+        g_gui = std::make_unique<Gui>();
     }
 }
 

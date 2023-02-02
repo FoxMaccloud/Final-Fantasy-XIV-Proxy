@@ -1,26 +1,47 @@
 #include "Proxy.hpp"
 
-inline SOCKET g_thisSocketSend;
-inline const char* g_thisBufferSend;
-inline uintptr_t g_thisLenSend;
+#define OFFSET_SEND 0x2320
+#define OFFSET_RECV 0x11D90
 
-std::add_pointer_t<int WSAAPI(SOCKET s, const char* buf, int len, int flags)> oSend;
-int WSAAPI hkSend(SOCKET s, const char* buf, int len, int flags)
+SOCKET g_thisSocketSend;
+const char* g_thisBufferSend;
+uintptr_t g_thisLenSend;
+
+struct Packet
+{
+	SOCKET s;
+	const char* buf;
+	int len;
+	int flags;
+};
+static std::vector<Packet> g_packets;
+
+template<class Func>
+static MH_STATUS WINAPI MH_CreateHook(Func* pHookMe, Func* pDetour, Func*& ppOriginal)
+{
+	return MH_CreateHook(pHookMe, pDetour, (LPVOID*)&ppOriginal);
+}
+
+static decltype(&send) oSend;
+//std::add_pointer_t<int PASCAL FAR(SOCKET s, const char* buf, int len, int flags)> oSend;
+int PASCAL FAR hkSend(SOCKET s, const char* buf, int len, int flags)
 {
 	g_thisSocketSend = s;
 	g_thisBufferSend = buf;
 	g_thisLenSend = len;
 
-	// Add packet to logs
-	LOG("[P] %s\n", buf);
+	g_packets.push_back({ s, buf, len, flags });
 
 	return oSend(s, buf, len, flags);
 }
 
 Proxy::Proxy()
 {
-	MH_STATUS minhookSend = MH_CreateHook(reinterpret_cast<void**>(&send), &hkSend, reinterpret_cast<void**>(&oSend));
-	MH_EnableHook(send);
+	LOG("[+] Creating Proxy\n");
+	MODULEINFO ws2_32info = HelperFunctions::GetModuleInfo(L"WS2_32.dll");
+	auto ws2_32send = (decltype(&send))((uintptr_t)ws2_32info.lpBaseOfDll + OFFSET_SEND);
+	MH_STATUS minhookSend = MH_CreateHook(ws2_32send, hkSend, oSend);
+	MH_EnableHook(ws2_32send);
 }
 
 Proxy::~Proxy()
@@ -30,13 +51,13 @@ Proxy::~Proxy()
 
 void Proxy::SendPackage(const char* packet)
 {
-	int packetLen = strlen(packet);
+	size_t packetLen = strlen(packet);
 
 	if (packetLen < 0) // find size of package structure
 		return;
 
 	std::vector<char> sendBuffer(packetLen);
-	strncpy(sendBuffer.data(), packet, packetLen);
+	std::copy(packet, packet + packetLen, sendBuffer.begin());
 
 	size_t i = 0;
 	for (size_t count = 0; count < packetLen; ++i, count += 2)

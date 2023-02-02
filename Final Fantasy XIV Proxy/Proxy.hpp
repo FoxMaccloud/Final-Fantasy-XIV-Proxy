@@ -1,9 +1,11 @@
 #pragma once
 #include <iostream>
-#include <WinSock2.h>
 #include <array>
 #include <vector>
+#include <Windows.h>
+#include <Psapi.h>
 
+#include "HelperFunctions.hpp"
 #include "Console.hpp"
 #include "Hook.hpp"
 #include "MinHook.h"
