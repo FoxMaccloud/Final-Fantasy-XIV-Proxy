@@ -7,13 +7,6 @@ SOCKET g_thisSocketSend;
 const char* g_thisBufferSend;
 uintptr_t g_thisLenSend;
 
-struct Packet
-{
-	SOCKET s;
-	const char* buf;
-	int len;
-	int flags;
-};
 static std::vector<Packet> g_packets;
 
 template<class Func>
@@ -22,8 +15,7 @@ static MH_STATUS WINAPI MH_CreateHook(Func* pHookMe, Func* pDetour, Func*& ppOri
 	return MH_CreateHook(pHookMe, pDetour, (LPVOID*)&ppOriginal);
 }
 
-static decltype(&send) oSend;
-//std::add_pointer_t<int PASCAL FAR(SOCKET s, const char* buf, int len, int flags)> oSend;
+std::add_pointer_t<int PASCAL FAR(SOCKET s, const char* buf, int len, int flags)> oSend;
 int PASCAL FAR hkSend(SOCKET s, const char* buf, int len, int flags)
 {
 	g_thisSocketSend = s;
@@ -37,8 +29,7 @@ int PASCAL FAR hkSend(SOCKET s, const char* buf, int len, int flags)
 
 Proxy::Proxy()
 {
-	LOG("[+] Creating Proxy\n");
-	MODULEINFO ws2_32info = HelperFunctions::GetModuleInfo(L"WS2_32.dll");
+	auto ws2_32info = HelperFunctions::GetModuleInfo(L"WS2_32.dll");
 	auto ws2_32send = (decltype(&send))((uintptr_t)ws2_32info.lpBaseOfDll + OFFSET_SEND);
 	MH_STATUS minhookSend = MH_CreateHook(ws2_32send, hkSend, oSend);
 	MH_EnableHook(ws2_32send);
@@ -46,10 +37,12 @@ Proxy::Proxy()
 
 Proxy::~Proxy()
 {
-
+	g_packets.clear();
+	g_packets.~vector();
 }
 
-void Proxy::SendPackage(const char* packet)
+// TODO: Move "hex to bytes" convertion to it's own function.
+void Proxy::SendPacket(const char* packet)
 {
 	size_t packetLen = strlen(packet);
 
@@ -62,18 +55,22 @@ void Proxy::SendPackage(const char* packet)
 	size_t i = 0;
 	for (size_t count = 0; count < packetLen; ++i, count += 2)
 	{
-		if (sendBuffer[count] >= 'A') {
+		if (sendBuffer[count] >= 'A')
+		{
 			sendBuffer[count] -= 'A';
 			sendBuffer[count] += 10;
 		}
-		else {
+		else
+		{
 			sendBuffer[count] -= 48;
 		}
-		if (sendBuffer[count + 1] >= 'A') {
+		if (sendBuffer[count + 1] >= 'A')
+		{
 			sendBuffer[count + 1] -= 'A';
 			sendBuffer[count + 1] += 10;
 		}
-		else {
+		else
+		{
 			sendBuffer[count + 1] -= 48;
 		}
 		sendBuffer[i] = (__int8)(((char)sendBuffer[count]) * (char)16);
@@ -88,3 +85,4 @@ void Proxy::SendPackage(const char* packet)
 	}
 	LOG("[!] No socket was found!\n");
 }
+

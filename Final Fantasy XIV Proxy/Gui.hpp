@@ -12,6 +12,7 @@ public:
 	Gui();
 	~Gui();
 	void Render();
+	void Theme();
 
 private:
 	std::unique_ptr<Proxy> m_proxy;

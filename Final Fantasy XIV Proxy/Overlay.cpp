@@ -339,6 +339,7 @@ Overlay::Overlay()
         oWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtr(g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WndProc)));
 
         g_gui = std::make_unique<Gui>();
+        g_gui->Theme();
     }
 }
 
