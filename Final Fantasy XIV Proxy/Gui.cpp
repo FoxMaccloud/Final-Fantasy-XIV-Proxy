@@ -24,7 +24,7 @@ void ExampleWindow()
 
 void Gui::Render()
 {
-    ExampleWindow();
+	ExampleWindow();
 	m_proxyGui.Draw();
 
 }
