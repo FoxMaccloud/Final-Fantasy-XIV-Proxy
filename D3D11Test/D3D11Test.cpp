@@ -129,7 +129,7 @@ INT WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, INT)
 
 				if( init )
 				{
-					HANDLE hDllMainThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)LoadLibraryA, (R"(C:\Users\FoxMaccloud\source\repos\Final Fantasy XIV Proxy\x64\Debug\Final Fantasy XIV Proxy.dll)"), 0, 0);
+					HANDLE hDllMainThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)LoadLibraryA, (R"(..\..\x64\Debug\Final Fantasy XIV Proxy.dll)"), 0, 0);
 					if ( hDllMainThread )
 					{
 						WaitForSingleObject(hDllMainThread, INFINITE);

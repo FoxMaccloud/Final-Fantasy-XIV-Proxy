@@ -11,8 +11,6 @@
 #include "Hook.hpp"
 #include "MinHook.h"
 
-static std::vector<Packet> g_packets;
-
 struct Packet
 {
 	SOCKET s;
