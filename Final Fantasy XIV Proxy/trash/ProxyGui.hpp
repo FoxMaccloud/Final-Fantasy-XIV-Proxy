@@ -9,7 +9,7 @@ struct LogInput
 	std::string packetId;
 	std::string opcode;
 	std::string packetData;
-	uint32_t sizeOfPacket;
+	int sizeOfPacket;
 	time_t timestamp;
 };
 
@@ -18,9 +18,10 @@ using CommandCallback = std::function<void(const std::vector<std::string>&)>;
 class ProxyGui
 {
 public:
-	ProxyGui(Proxy& proxy);
+	ProxyGui();
 	~ProxyGui();
 
+	void AddPacket(Packet packet);
 	void AddLog(LogInput logInput);
 	void ClearLog();
 	void Draw();
@@ -29,8 +30,7 @@ public:
 
 
 private:
-	Proxy& m_proxy;
-	std::string m_userInput;
+	std::vector<char> m_userInput;
 	std::unordered_map<std::string, CommandCallback> m_commands;
 	std::vector<std::string> m_commandsHistory;
 	uint32_t m_maxLogSize = 2000;

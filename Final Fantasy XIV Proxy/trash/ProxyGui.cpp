@@ -1,21 +1,38 @@
 #include "ProxyGui.hpp"
 
 
-ProxyGui::ProxyGui(Proxy& proxy) : m_proxy(proxy)
+ProxyGui::ProxyGui()
 {
 	RegisterCommand("help", [this](const std::vector<std::string>& args) { Help(); });
 	RegisterCommand("history", [this](const std::vector<std::string>& args) { History(); });
 	RegisterCommand("clear", [this](const std::vector<std::string>& args) { ClearLog(); });
-	RegisterCommand("send", [this](const std::vector<std::string>& args) { m_proxy.SendPacket(args.at(1).c_str()); });
+	RegisterCommand("send", [this](const std::vector<std::string>& args) { g_proxy.SendPacket(args.at(1).c_str()); });
 	AddLog({ "", "", "Welcome!", 0, 0 });
 	m_logSend = false;
 	m_logRecv = false;
 	m_copyToClipboard = false;
+	m_userInput.resize(16384);
 }
 
 ProxyGui::~ProxyGui()
 {
 	ClearLog();
+}
+
+void ProxyGui::AddPacket(Packet packet)
+{
+	// TODO: implement packet parser and packet identifier
+	std::string packetId = "Unknwon";
+	std::string opcode = "0x1234";
+	char const hexChars[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+	std::string packetData;
+	for (int i = 0; i < packet.len; i++)
+	{
+		packetData += hexChars[(packet.buf[i] & 0xF0) >> 4];
+		packetData += hexChars[(packet.buf[i] & 0x0F) >> 0];
+	}
+
+	AddLog({ packetId, opcode, packetData, packet.len, NULL });
 }
 
 void ProxyGui::AddLog(LogInput logInput)
@@ -67,7 +84,7 @@ void ProxyGui::ExecuteCommand(std::string command)
 
 	if (commandArgs.size() == 0)
 	{
-		m_proxy.SendPacket(commandArgs.at(1).c_str());
+		g_proxy.SendPacket(commandArgs.at(1).c_str());
 		return;
 	}
 
@@ -94,7 +111,7 @@ void ProxyGui::Draw()
 			}
 			if (ImGui::BeginMenu("Edit"))
 			{
-				if (ImGui::MenuItem("Nothing to see here!")) {}
+				if (ImGui::MenuItem("Nothing to see here yet!")) {}
 				ImGui::EndMenu();
 			}
 			ImGui::EndMenuBar();
@@ -148,6 +165,24 @@ void ProxyGui::Draw()
 		}
 		ImGui::EndChild();
 		ImGui::Separator();
+
+		ImGui::Dummy(ImVec2(0.0f, 2.0f));
+		ImGui::Columns(2);
+		ImGui::SetColumnOffset(1, 60);
+		{
+			if (ImGui::Button("Send", ImVec2(45, 40))) {};
+		}
+		ImGui::NextColumn();
+		{
+			//ImGuiInputTextFlags inputTextFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CtrlEnterForNewLine;
+			//if (ImGui::InputTextMultiline("Input", m_userInput.data(), m_userInput.size(), ImVec2(ImGui::GetWindowSize().x / 3, ImGui::GetWindowSize().y / 10), inputTextFlags, NULL, NULL))
+			//{
+			//	
+			//}
+			//ImGui::SetItemDefaultFocus();
+			//if (reclaim_focus)
+			//	ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
+		}
 	}
 	ImGui::End();
 }

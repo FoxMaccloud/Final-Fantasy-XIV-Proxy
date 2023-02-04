@@ -3,8 +3,6 @@
 #include <imgui.h>
 
 #include "Proxy.hpp"
-#include "ProxyGui.hpp"
-#include "LuaGui.hpp"
 
 class Gui
 {
@@ -16,6 +14,4 @@ public:
 
 private:
 	Proxy m_proxy;
-	ProxyGui m_proxyGui;
-	LuaGui m_luaGui;
 };

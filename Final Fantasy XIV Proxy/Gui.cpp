@@ -24,9 +24,8 @@ void ExampleWindow()
 
 void Gui::Render()
 {
-	ExampleWindow();
-	m_proxyGui.Draw();
-
+	//ExampleWindow();
+	m_proxy.Draw();
 }
 
 void Gui::Theme()
@@ -81,7 +80,7 @@ void Gui::Theme()
 	style->Colors[ImGuiCol_SliderGrabActive] = ImColor(255, 255, 255, 255);
 }
 
-Gui::Gui() : m_proxyGui(m_proxy)
+Gui::Gui()
 {
 }
 
