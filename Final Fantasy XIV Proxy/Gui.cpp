@@ -81,9 +81,8 @@ void Gui::Theme()
 	style->Colors[ImGuiCol_SliderGrabActive] = ImColor(255, 255, 255, 255);
 }
 
-Gui::Gui()
+Gui::Gui() : m_proxyGui(m_proxy)
 {
-    m_proxy = std::make_unique<Proxy>();
 }
 
 Gui::~Gui()

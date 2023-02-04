@@ -1,4 +1,5 @@
 #include "Proxy.hpp"
+#include "ProxyGui.hpp"
 
 #define OFFSET_SEND 0x2320
 #define OFFSET_RECV 0x11D90

@@ -2,6 +2,7 @@
 #include "Proxy.hpp"
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <functional>
 
 struct LogInput
 {
@@ -12,22 +13,25 @@ struct LogInput
 	time_t timestamp;
 };
 
+using CommandCallback = std::function<void(const std::vector<std::string>&)>;
+
 class ProxyGui
 {
 public:
-	ProxyGui();
+	ProxyGui(Proxy& proxy);
 	~ProxyGui();
 
 	void AddLog(LogInput logInput);
 	void ClearLog();
 	void Draw();
-	void RegisterCommand(const std::string& command);
+	void RegisterCommand(const std::string& command, CommandCallback callback);
 	void ExecuteCommand(std::string command);
 
 
 private:
+	Proxy& m_proxy;
 	std::string m_userInput;
-	std::vector<std::string> m_commands;
+	std::unordered_map<std::string, CommandCallback> m_commands;
 	std::vector<std::string> m_commandsHistory;
 	uint32_t m_maxLogSize = 2000;
 	std::vector<LogInput> m_history;
@@ -37,4 +41,7 @@ private:
 	bool m_logRecv;
 
 	bool m_copyToClipboard;
+
+	void Help();
+	void History();
 };

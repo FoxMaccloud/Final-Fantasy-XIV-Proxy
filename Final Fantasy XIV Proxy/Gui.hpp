@@ -15,7 +15,7 @@ public:
 	void Theme();
 
 private:
-	std::unique_ptr<Proxy> m_proxy;
+	Proxy m_proxy;
 	ProxyGui m_proxyGui;
 	LuaGui m_luaGui;
 };

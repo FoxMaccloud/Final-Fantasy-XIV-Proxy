@@ -118,7 +118,10 @@ void RenderImGui(IDXGISwapChain* pSwapChain)
         /* RENDER FUNC */
         if (g_showMenu)
         {
-            g_gui->Render();
+            if (g_gui)
+            {
+                g_gui->Render();
+            }
         }
 
         ImGui::Render();
@@ -272,11 +275,15 @@ Overlay::Overlay()
         if (ImGui::GetCurrentContext())
             return;
 
+        g_gui = std::make_unique<Gui>();
+
         ImGui::CreateContext();
         ImGui_ImplWin32_Init(g_hwnd);
-
+        
         ImGuiIO& io = ImGui::GetIO();
         io.IniFilename = io.LogFilename = nullptr;
+
+        g_gui->Theme();
 
         IDXGIDevice* pDXGIDevice = NULL;
         g_pd3dDevice->QueryInterface(IID_PPV_ARGS(&pDXGIDevice));
@@ -337,9 +344,6 @@ Overlay::Overlay()
         MH_EnableHook(fnResizeBuffers1);
 
         oWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtr(g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WndProc)));
-
-        g_gui = std::make_unique<Gui>();
-        g_gui->Theme();
     }
 }
 

@@ -5,6 +5,11 @@ VisualStudioVersion = 17.4.33213.308
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Final Fantasy XIV Proxy", "Final Fantasy XIV Proxy\Final Fantasy XIV Proxy.vcxproj", "{7F11F894-A127-4B6F-A2C9-14974FBDB201}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "D3D11Test", "D3D11Test\D3D11Test.vcxproj", "{BD5FE051-B9CE-4A77-AEDA-BF82ACD4F399}"
+	ProjectSection(ProjectDependencies) = postProject
+		{7F11F894-A127-4B6F-A2C9-14974FBDB201} = {7F11F894-A127-4B6F-A2C9-14974FBDB201}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +26,14 @@ Global
 		{7F11F894-A127-4B6F-A2C9-14974FBDB201}.Release|x64.Build.0 = Release|x64
 		{7F11F894-A127-4B6F-A2C9-14974FBDB201}.Release|x86.ActiveCfg = Release|Win32
 		{7F11F894-A127-4B6F-A2C9-14974FBDB201}.Release|x86.Build.0 = Release|Win32
+		{BD5FE051-B9CE-4A77-AEDA-BF82ACD4F399}.Debug|x64.ActiveCfg = Debug|x64
+		{BD5FE051-B9CE-4A77-AEDA-BF82ACD4F399}.Debug|x64.Build.0 = Debug|x64
+		{BD5FE051-B9CE-4A77-AEDA-BF82ACD4F399}.Debug|x86.ActiveCfg = Debug|Win32
+		{BD5FE051-B9CE-4A77-AEDA-BF82ACD4F399}.Debug|x86.Build.0 = Debug|Win32
+		{BD5FE051-B9CE-4A77-AEDA-BF82ACD4F399}.Release|x64.ActiveCfg = Release|x64
+		{BD5FE051-B9CE-4A77-AEDA-BF82ACD4F399}.Release|x64.Build.0 = Release|x64
+		{BD5FE051-B9CE-4A77-AEDA-BF82ACD4F399}.Release|x86.ActiveCfg = Release|Win32
+		{BD5FE051-B9CE-4A77-AEDA-BF82ACD4F399}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
