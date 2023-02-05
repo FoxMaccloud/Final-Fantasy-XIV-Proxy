@@ -15,10 +15,9 @@
 #include "Hook.hpp"
 #include "MinHook.h"
 
-using CommandCallback = std::function<void(const std::vector<std::string>&)>;
-
 class Proxy
 {
+	using CommandCallback = std::function<void(const std::vector<std::string>&)>;
 public:
 	Proxy();
 	~Proxy();
@@ -57,6 +56,8 @@ private:
 	bool m_logRecv;
 
 	bool m_copyToClipboard;
+	bool m_autoScroll;
+	bool m_scrollToBottom;
 
 	void Help();
 	void History();

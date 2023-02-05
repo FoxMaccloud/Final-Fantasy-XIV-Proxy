@@ -64,7 +64,9 @@ Proxy::Proxy()
 	m_logSend = false;
 	m_logRecv = false;
 	m_copyToClipboard = false;
-	m_userInput.resize(16384);
+	m_autoScroll = true;
+	m_scrollToBottom = false;
+	m_userInput.resize(16384, NULL);
 }
 
 Proxy::~Proxy()
@@ -141,9 +143,9 @@ void Proxy::Help()
 void Proxy::History()
 {
 	std::string history = "";
-	for (const auto& historyItem : m_commands)
+	for (const auto& historyItem : m_commandsHistory)
 	{
-		history += historyItem.first + "\n";
+		history += historyItem + "\n";
 	}
 	AddLog({ "", "", history, NULL, NULL });
 }
@@ -194,10 +196,11 @@ void Proxy::Draw()
 		}
 		ImGui::Checkbox("Log Send", &m_logSend);
 		ImGui::SameLine(); ImGui::Checkbox("Log Recv", &m_logRecv);
+		ImGui::SameLine(); ImGui::Checkbox("Auto-scoll", &m_autoScroll);
 		ImGui::SameLine(); m_filter.Draw("Filter (\"incl,-excl\") (\"error\")", 180);
 		ImGui::Separator();
 
-		const float footerHeightReserve = ImGui::GetStyle().ItemSpacing.y + (ImGui::GetFrameHeightWithSpacing() * 2);
+		const float footerHeightReserve = ImGui::GetStyle().ItemSpacing.y + (ImGui::GetFrameHeightWithSpacing() * 1.5f);
 		ImGui::BeginChild("PacketRegion", ImVec2(0, -footerHeightReserve), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 		{
 			//ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
@@ -207,15 +210,24 @@ void Proxy::Draw()
 			if (ImGui::BeginTable("Packets", 5, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY))
 			{
 				ImGui::TableSetupScrollFreeze(0, 1); // Make top row always visible
-				ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_None);
-				ImGui::TableSetupColumn("Opcode", ImGuiTableColumnFlags_None);
-				ImGui::TableSetupColumn("Packet", ImGuiTableColumnFlags_None);
-				ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_None);
-				ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_None);
+				// Fix these stupid table weights!
+				ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 80);
+				ImGui::TableSetupColumn("Opcode", ImGuiTableColumnFlags_WidthFixed, 50);
+				ImGui::TableSetupColumn("Data", ImGuiTableColumnFlags_WidthFixed, 200);
+				ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 50);
+				ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthFixed, 100);
 				ImGui::TableHeadersRow();
 
 				for (auto logEntry : g_packets)
 				{
+					if (!((m_filter.PassFilter(logEntry.opcode.c_str())) ||
+						(m_filter.PassFilter(logEntry.packetData.c_str())) ||
+						(m_filter.PassFilter(logEntry.packetId.c_str())) ||
+						(m_filter.PassFilter(std::to_string(logEntry.sizeOfPacket).c_str()))))
+					{
+						continue;
+					}
+
 					ImGui::TableNextRow(); // Next row
 					ImGui::TableSetColumnIndex(0);
 					ImGui::TextWrapped(logEntry.packetId.c_str());
@@ -234,31 +246,44 @@ void Proxy::Draw()
 					std::string timestamp = timeStream.str();
 					ImGui::TextWrapped(timestamp.c_str());
 				}
+				if (m_copyToClipboard)
+					ImGui::LogFinish();
+				if (m_scrollToBottom || (m_autoScroll && (ImGui::GetScrollY() >= ImGui::GetScrollMaxY())))
+					ImGui::SetScrollHereY(1.0f);
+				m_scrollToBottom = false;
 				ImGui::EndTable();
 			}
-			if (m_copyToClipboard)
-				ImGui::LogFinish();
+			ImGui::EndChild();
 		}
-		ImGui::EndChild();
 		ImGui::Separator();
+
+		bool reclaimFocusOnInput = false;
 
 		ImGui::Dummy(ImVec2(0.0f, 2.0f));
 		ImGui::Columns(2);
 		ImGui::SetColumnOffset(1, 60);
 		{
-			if (ImGui::Button("Send", ImVec2(45, 40))) {};
+			if (ImGui::Button("Send", ImVec2(45, 19)))
+			{
+				ExecuteCommand(m_userInput.data());
+				memset(m_userInput.data(), 0, m_userInput.size());
+				reclaimFocusOnInput = true;
+			}
 		}
 		ImGui::NextColumn();
 		{
-			//ImGuiInputTextFlags inputTextFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CtrlEnterForNewLine;
-			//if (ImGui::InputTextMultiline("Input", m_userInput.data(), m_userInput.size(), ImVec2(ImGui::GetWindowSize().x / 3, ImGui::GetWindowSize().y / 10), inputTextFlags, NULL, NULL))
-			//{
-			//	
-			//}
-			//ImGui::SetItemDefaultFocus();
-			//if (reclaim_focus)
-			//	ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
+			ImGuiInputTextFlags inputTextFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
+			if (ImGui::InputText("Input", m_userInput.data(), m_userInput.size(), inputTextFlags, NULL, NULL))
+			{
+				ExecuteCommand(m_userInput.data());
+				memset(m_userInput.data(), 0, m_userInput.size());
+				reclaimFocusOnInput = true;
+				m_scrollToBottom = true;
+			}
+			ImGui::SetItemDefaultFocus();
 		}
+		if (reclaimFocusOnInput)
+			ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
 	}
 	ImGui::End();
 }
