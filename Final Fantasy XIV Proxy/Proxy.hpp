@@ -14,6 +14,7 @@
 #include "Console.hpp"
 #include "Hook.hpp"
 #include "MinHook.h"
+#include <unordered_set>
 
 class Proxy
 {
@@ -39,11 +40,11 @@ public:
 		time_t timestamp;
 	};
 
+	void InitConsole();
 	void ClearLog();
-	void Draw();
+	void DrawConsole();
 	void RegisterCommand(const std::string& command, CommandCallback callback);
 	void ExecuteCommand(std::string command);
-
 
 private:
 	std::vector<char> m_userInput;
@@ -61,4 +62,21 @@ private:
 
 	void Help();
 	void History();
+
+	// Lua shit
+public:
+	using Identifiers = std::unordered_set<std::string>;
+	using Keywords = std::unordered_set<std::string>;
+
+	void InitLuaEditor();
+	void DrawLuaEditor();
+
+private:
+	Identifiers m_identifiers;
+	Keywords m_keywords;
+	std::vector<char> m_luaEditorData;
+	bool m_textChange;
+
+	bool m_run;
+
 };

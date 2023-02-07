@@ -49,13 +49,19 @@ static int PASCAL FAR hkSend(SOCKET s, const char* buf, int len, int flags)
 	return oSend(s, buf, len, flags);
 }
 
-Proxy::Proxy()
+static int ResizeInputTextCallback(ImGuiInputTextCallbackData* data)
 {
-	auto ws2_32info = HelperFunctions::GetModuleInfo(L"WS2_32.dll");
-	auto ws2_32send = (decltype(&send))((uintptr_t)ws2_32info.lpBaseOfDll + OFFSET_SEND);
-	MH_STATUS minhookSend = MH_CreateHook(ws2_32send, hkSend, oSend);
-	MH_EnableHook(ws2_32send);
-	
+	if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
+	{
+		auto& vec = *static_cast<std::vector<char>*>(data->UserData);
+		vec.resize(data->BufTextLen + 1);
+		data->Buf = vec.data();
+	}
+	return 0;
+}
+
+void Proxy::InitConsole()
+{
 	RegisterCommand("help", [this](const std::vector<std::string>& args) { Help(); });
 	RegisterCommand("history", [this](const std::vector<std::string>& args) { History(); });
 	RegisterCommand("clear", [this](const std::vector<std::string>& args) { ClearLog(); });
@@ -66,7 +72,46 @@ Proxy::Proxy()
 	m_copyToClipboard = false;
 	m_autoScroll = true;
 	m_scrollToBottom = false;
-	m_userInput.resize(16384, NULL);
+	m_userInput.resize(1, NULL);
+}
+
+void Proxy::InitLuaEditor()
+{
+	static const char* const keywords[] = {
+	"and", "break", "do", "", "else", "elseif", "end", "false", "for", "function", "if", "in", "", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while"
+	};
+	static const char* const identifiers[] = {
+	"assert", "collectgarbage", "dofile", "error", "getmetatable", "ipairs", "loadfile", "load", "loadstring",  "next",  "pairs",  "pcall",  "print",  "rawequal",  "rawlen",  "rawget",  "rawset",
+	"select",  "setmetatable",  "tonumber",  "tostring",  "type",  "xpcall",  "_G",  "_VERSION","arshift", "band", "bnot", "bor", "bxor", "btest", "extract", "lrotate", "lshift", "replace",
+	"rrotate", "rshift", "create", "resume", "running", "status", "wrap", "yield", "isyieldable", "debug","getuservalue", "gethook", "getinfo", "getlocal", "getregistry", "getmetatable",
+	"getupvalue", "upvaluejoin", "upvalueid", "setuservalue", "sethook", "setlocal", "setmetatable", "setupvalue", "traceback", "close", "flush", "input", "lines", "open", "output", "popen",
+	"read", "tmpfile", "type", "write", "close", "flush", "lines", "read", "seek", "setvbuf", "write", "__gc", "__tostring", "abs", "acos", "asin", "atan", "ceil", "cos", "deg", "exp", "tointeger",
+	"floor", "fmod", "ult", "log", "max", "min", "modf", "rad", "random", "randomseed", "sin", "sqrt", "string", "tan", "type", "atan2", "cosh", "sinh", "tanh",
+	 "pow", "frexp", "ldexp", "log10", "pi", "huge", "maxinteger", "mininteger", "loadlib", "searchpath", "seeall", "preload", "cpath", "path", "searchers", "loaded", "module", "require", "clock",
+	 "date", "difftime", "execute", "exit", "getenv", "remove", "rename", "setlocale", "time", "tmpname", "byte", "char", "dump", "find", "format", "gmatch", "gsub", "len", "lower", "match", "rep",
+	 "reverse", "sub", "upper", "pack", "packsize", "unpack", "concat", "maxn", "insert", "pack", "unpack", "remove", "move", "sort", "offset", "codepoint", "char", "len", "codes", "charpattern",
+	 "coroutine", "table", "io", "os", "string", "utf8", "bit32", "math", "debug", "package"
+	};
+
+	for (auto& k : keywords)
+		m_keywords.insert(k);
+
+	for (auto& k : identifiers)
+		m_identifiers.insert(k);
+
+	// TODO: make identifiers for comments etc.
+	m_textChange = false;
+	m_run = false;
+}
+
+Proxy::Proxy()
+{
+	auto ws2_32info = HelperFunctions::GetModuleInfo(L"WS2_32.dll");
+	auto ws2_32send = (decltype(&send))((uintptr_t)ws2_32info.lpBaseOfDll + OFFSET_SEND);
+	MH_STATUS minhookSend = MH_CreateHook(ws2_32send, hkSend, oSend);
+	MH_EnableHook(ws2_32send);
+	InitConsole();
+	InitLuaEditor();
 }
 
 Proxy::~Proxy()
@@ -175,7 +220,7 @@ void Proxy::ExecuteCommand(std::string command)
 	foundCommand->second(commandArgs);
 }
 
-void Proxy::Draw()
+void Proxy::DrawConsole()
 {
 	ImGui::Begin("Proxy", nullptr, ImGuiWindowFlags_MenuBar);
 	{
@@ -272,8 +317,8 @@ void Proxy::Draw()
 		}
 		ImGui::NextColumn();
 		{
-			ImGuiInputTextFlags inputTextFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
-			if (ImGui::InputText("Input", m_userInput.data(), m_userInput.size(), inputTextFlags, NULL, NULL))
+			ImGuiInputTextFlags inputTextFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_CallbackResize;
+			if (ImGui::InputText("Input", m_userInput.data(), m_userInput.size(), inputTextFlags, ResizeInputTextCallback, &m_userInput))
 			{
 				ExecuteCommand(m_userInput.data());
 				memset(m_userInput.data(), 0, m_userInput.size());
@@ -284,6 +329,62 @@ void Proxy::Draw()
 		}
 		if (reclaimFocusOnInput)
 			ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
+	}
+	ImGui::End();
+}
+
+void Proxy::DrawLuaEditor()
+{
+	ImGui::Begin("Lua Editor", nullptr, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
+	
+	if (ImGui::BeginMenuBar())
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("Save"))
+			{
+				/// save text....
+			}
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Edit"))
+		{
+			ImGui::Text("Nothing to see here yet!");
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("View"))
+		{
+			ImGui::Text("Nothing to see here yet!");
+			ImGui::EndMenu();
+		}
+		ImGui::EndMenuBar();
+	}
+	// TODO: add some line numbers etc?
+	int textLines = 1;
+	for (auto c : m_luaEditorData)
+		if (c == '\n') textLines++;
+
+	std::string headerText = std::to_string(textLines) + " lines";
+	ImGui::Text(headerText.c_str());
+
+	ImGui::SameLine(); ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() - 52); m_run = ImGui::Button("Run", ImVec2(60, 19));
+
+	// Main Text area
+	// TODO:
+	// Save file
+	// Load file
+	// Execute file
+	// Line numbers
+	// Syntax highlighting
+	{
+		if (m_luaEditorData.empty())
+			m_luaEditorData.push_back('\0');
+
+		auto luaEditorFlags = ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackResize;
+		ImGui::InputTextMultiline("##LuaEditor", m_luaEditorData.data(), m_luaEditorData.size(), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16), luaEditorFlags, ResizeInputTextCallback, &m_luaEditorData);
+	
+		
 	}
 	ImGui::End();
 }

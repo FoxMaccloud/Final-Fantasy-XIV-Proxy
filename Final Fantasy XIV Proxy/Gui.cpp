@@ -25,7 +25,8 @@ void ExampleWindow()
 void Gui::Render()
 {
 	//ExampleWindow();
-	m_proxy.Draw();
+	m_proxy.DrawConsole();
+	m_proxy.DrawLuaEditor();
 }
 
 void Gui::Theme()
@@ -33,7 +34,7 @@ void Gui::Theme()
 	ImGuiStyle* style = &ImGui::GetStyle();
 
 	style->ChildBorderSize = 1;
-	//style->WindowMinSize = ImVec2(600, 400);
+	style->WindowMinSize = ImVec2(600, 400);
 	//style->WindowMinSize = ImVec2(imgui_window_width, imgui_window_height);
 	style->WindowTitleAlign = ImVec2(0.5, 0.5);
 	style->AntiAliasedFill = true;
@@ -44,7 +45,7 @@ void Gui::Theme()
 	style->ScrollbarRounding = 0;
 	style->TabRounding = 0;
 	style->GrabRounding = 0;
-	style->ScrollbarSize = 0.9f;
+	style->ScrollbarSize = 20.0f;
 
 	style->Colors[ImGuiCol_TitleBg] = ImColor(25, 25, 25, 230);
 	style->Colors[ImGuiCol_TitleBgActive] = ImColor(25, 25, 25, 230);
