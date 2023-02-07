@@ -7,6 +7,9 @@ SOCKET g_thisSocketSend;
 const char* g_thisBufferSend;
 uintptr_t g_thisLenSend;
 
+std::vector<char> HexToBytes(std::string hexString);
+char const hexChars[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+
 std::vector<Proxy::LogInput> g_packets;
 
 static void AddLog(Proxy::LogInput logInput)
@@ -20,7 +23,6 @@ static void AddPacket(Proxy::Packet packet)
 	// TODO: implement packet parser and packet identifier
 	std::string packetId = "Unknwon";
 	std::string opcode = "0x1234";
-	char const hexChars[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 	std::string packetData;
 	for (int i = 0; i < packet.len; i++)
 	{
@@ -54,7 +56,7 @@ static int ResizeInputTextCallback(ImGuiInputTextCallbackData* data)
 	if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
 	{
 		auto& vec = *static_cast<std::vector<char>*>(data->UserData);
-		vec.resize(data->BufTextLen + 1);
+		vec.resize(static_cast<std::vector<char, std::allocator<char>>::size_type>(data->BufTextLen) + 1);
 		data->Buf = vec.data();
 	}
 	return 0;
@@ -65,7 +67,7 @@ void Proxy::InitConsole()
 	RegisterCommand("help", [this](const std::vector<std::string>& args) { Help(); });
 	RegisterCommand("history", [this](const std::vector<std::string>& args) { History(); });
 	RegisterCommand("clear", [this](const std::vector<std::string>& args) { ClearLog(); });
-	RegisterCommand("send", [this](const std::vector<std::string>& args) { SendPacket(args.at(1).c_str()); });
+	RegisterCommand("send", [this](const std::vector<std::string>& args) { SendPacket(HexToBytes(args.at(1)).data()); });
 	AddLog({ "", "", "Welcome!", 0, 0 });
 	m_logSend = false;
 	m_logRecv = false;
@@ -119,20 +121,62 @@ Proxy::~Proxy()
 	ClearLog();
 }
 
-// TODO: Move "hex to bytes" convertion to it's own function.
-void Proxy::SendPacket(const char* packet)
-{
-	size_t packetLen = strlen(packet);
 
-	if (packetLen < 0) // find size of package structure
-		return;
+std::vector<char> HexToBytes(std::string hexString)
+{
+	size_t packetLen = strlen(hexString.c_str());
+	if (packetLen <= 0)
+	{
+		return std::vector<char>(0);
+	}
+
+	bool hexPrefix = false;
+	if (hexString.compare(0, 2, "0x") == 0)
+		hexPrefix = true;
+	if (hexPrefix)
+	{
+		if ((hexString.size() > 2) &&
+			(hexString.find_first_not_of("0123456789ABCDEF", 2) != std::string::npos))
+		{
+			AddLog({ "[ERROR]", "", "Please only hex characters in send\n0x123ABC", NULL, NULL });
+			return std::vector<char>(0);
+		}
+	}
+	else
+	{
+		if (hexString.find_first_not_of("0123456789ABCDEF", 0) != std::string::npos)
+		{
+			AddLog({ "[ERROR]", "", "Please only hex characters in send\n123ABC", NULL, NULL });
+			return std::vector<char>(0);
+		}
+	}
+
+	if (hexPrefix)
+	{
+		hexString.erase(0, 2);
+	}
+
+	if (packetLen % 2 != 0)
+	{
+		AddLog({ "[ERROR]", "", "Odd packet length", NULL, NULL });
+		return std::vector<char>(0);
+	}
+	packetLen = packetLen / 2;
 
 	std::vector<char> sendBuffer(packetLen);
-	std::copy(packet, packet + packetLen, sendBuffer.begin());
-
+	
 	size_t i = 0;
-	for (size_t count = 0; count < packetLen; ++i, count += 2)
+	for (size_t count = 1; count < packetLen; ++i, count += 2)
 	{
+		if (sendBuffer[count-1] >= 'A')
+		{
+			sendBuffer[count-1] -= 'A';
+			sendBuffer[count-1] += 10;
+		}
+		else
+		{
+			sendBuffer[count-1] -= 48;
+		}
 		if (sendBuffer[count] >= 'A')
 		{
 			sendBuffer[count] -= 'A';
@@ -142,23 +186,22 @@ void Proxy::SendPacket(const char* packet)
 		{
 			sendBuffer[count] -= 48;
 		}
-		if (sendBuffer[count + 1] >= 'A')
-		{
-			sendBuffer[count + 1] -= 'A';
-			sendBuffer[count + 1] += 10;
-		}
-		else
-		{
-			sendBuffer[count + 1] -= 48;
-		}
-		sendBuffer[i] = (__int8)(((char)sendBuffer[count]) * (char)16);
-		sendBuffer[i] += (__int8)sendBuffer[count + 1];
+		sendBuffer[i] = (__int8)(((char)sendBuffer[count-1]) * (char)16);
+		sendBuffer[i] += (__int8)sendBuffer[count];
 	}
 	sendBuffer[i] = '\0';
 
+	return sendBuffer;
+}
+
+void Proxy::SendPacket(const char* packet)
+{
+	if ((!packet) || (sizeof(packet) < 2)) // Get the size of the packet struct instead of a dumb value like 2...
+		return;
+
 	if (g_thisSocketSend)
 	{
-		oSend(g_thisSocketSend, sendBuffer.data(), packetLen / 2, NULL);
+		oSend(g_thisSocketSend, packet, sizeof(packet), NULL);
 		return;
 	}
 	LOG("[!] No socket was found!\n");
@@ -177,9 +220,10 @@ void Proxy::RegisterCommand(const std::string& command, CommandCallback callback
 
 void Proxy::Help()
 {
-	std::string commands = "";
+	std::string commands = "Commands:\n";
 	for (const auto& registedCommand : m_commands)
 	{
+		commands += " ";
 		commands += registedCommand.first + "\n";
 	}
 	AddLog({ "", "", commands, NULL, NULL });
@@ -207,7 +251,7 @@ void Proxy::ExecuteCommand(std::string command)
 
 	if (commandArgs.size() == 0)
 	{
-		SendPacket(commandArgs.at(1).c_str());
+		SendPacket(HexToBytes(commandArgs.at(1)).data());
 		return;
 	}
 
@@ -224,6 +268,7 @@ void Proxy::DrawConsole()
 {
 	ImGui::Begin("Proxy", nullptr, ImGuiWindowFlags_MenuBar);
 	{
+		
 		if (ImGui::BeginMenuBar())
 		{
 			if (ImGui::BeginMenu("File"))
@@ -252,15 +297,20 @@ void Proxy::DrawConsole()
 			if (m_copyToClipboard)
 				ImGui::LogToClipboard(); // Start logging to clipboard
 
+			float windowWidth = ImGui::GetWindowContentRegionWidth();
+			float nameWidth = (static_cast<float>((700 * 10)) / 100); // 700 -> min window size
+			float opcodeWidth = (static_cast<float>((700 * 10)) / 100);
+			float sizeWith = (static_cast<float>((700 * 10)) / 100);
+			float timeWidth = (static_cast<float>((700 * 15)) / 100);
+			float dataWidth = windowWidth - nameWidth - opcodeWidth - sizeWith - timeWidth;
 			if (ImGui::BeginTable("Packets", 5, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY))
 			{
 				ImGui::TableSetupScrollFreeze(0, 1); // Make top row always visible
-				// Fix these stupid table weights!
-				ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 80);
-				ImGui::TableSetupColumn("Opcode", ImGuiTableColumnFlags_WidthFixed, 50);
-				ImGui::TableSetupColumn("Data", ImGuiTableColumnFlags_WidthFixed, 200);
-				ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 50);
-				ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthFixed, 100);
+				ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, nameWidth);
+				ImGui::TableSetupColumn("Opcode", ImGuiTableColumnFlags_WidthFixed, opcodeWidth);
+				ImGui::TableSetupColumn("Data", ImGuiTableColumnFlags_WidthFixed, dataWidth);
+				ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, sizeWith);
+				ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthFixed, timeWidth);
 				ImGui::TableHeadersRow();
 
 				for (auto logEntry : g_packets)
@@ -273,6 +323,12 @@ void Proxy::DrawConsole()
 						continue;
 					}
 
+					bool color = false;
+					if (logEntry.packetId == "[ERROR]")
+					{
+						color = true;
+						ImGui::PushStyleColor(ImGuiCol_Text, { 1.0f, 0.4f, 0.4f, 1.0f });
+					}
 					ImGui::TableNextRow(); // Next row
 					ImGui::TableSetColumnIndex(0);
 					ImGui::TextWrapped(logEntry.packetId.c_str());
@@ -290,6 +346,10 @@ void Proxy::DrawConsole()
 					timeStream << std::put_time(&tm, "%H.%M.%S");
 					std::string timestamp = timeStream.str();
 					ImGui::TextWrapped(timestamp.c_str());
+					if (color)
+					{
+						ImGui::PopStyleColor();
+					}
 				}
 				if (m_copyToClipboard)
 					ImGui::LogFinish();
@@ -360,7 +420,7 @@ void Proxy::DrawLuaEditor()
 		}
 		ImGui::EndMenuBar();
 	}
-	// TODO: add some line numbers etc?
+
 	int textLines = 1;
 	for (auto c : m_luaEditorData)
 		if (c == '\n') textLines++;
@@ -381,10 +441,30 @@ void Proxy::DrawLuaEditor()
 		if (m_luaEditorData.empty())
 			m_luaEditorData.push_back('\0');
 
-		auto luaEditorFlags = ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackResize;
-		ImGui::InputTextMultiline("##LuaEditor", m_luaEditorData.data(), m_luaEditorData.size(), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16), luaEditorFlags, ResizeInputTextCallback, &m_luaEditorData);
-	
-		
+		//ImGui::Columns(2);
+		//ImGui::SetColumnOffset(1, 40);
+		//{
+		//	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.01f, 1));
+		//	for (size_t i = 0; i < textLines; i++)
+		//	{
+		//		std::string line = std::to_string(i);
+		//		std::string lineNum = "";
+		//		int lineStrWidth = strlen(line.c_str());
+
+		//		if (lineStrWidth == 1) lineNum += "   ";
+		//		if (lineStrWidth == 2) lineNum += "  ";
+		//		if (lineStrWidth == 3) lineNum += " ";
+		//		if (lineStrWidth == 4) lineNum += "";
+		//		lineNum += line;
+		//		ImGui::Text(lineNum.c_str());
+		//	}
+		//	ImGui::PopStyleVar();
+		//}
+		//ImGui::NextColumn();
+		//{
+			auto luaEditorFlags = ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackResize;
+			ImGui::InputTextMultiline("##LuaEditor", m_luaEditorData.data(), m_luaEditorData.size(), ImVec2(ImGui::GetWindowContentRegionWidth(), ImGui::GetWindowHeight() - (ImGui::GetTextLineHeight() * 8)), luaEditorFlags, ResizeInputTextCallback, &m_luaEditorData);
+		//}
 	}
 	ImGui::End();
 }

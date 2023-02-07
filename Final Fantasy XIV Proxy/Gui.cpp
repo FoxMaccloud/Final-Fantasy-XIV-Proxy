@@ -34,7 +34,7 @@ void Gui::Theme()
 	ImGuiStyle* style = &ImGui::GetStyle();
 
 	style->ChildBorderSize = 1;
-	style->WindowMinSize = ImVec2(600, 400);
+	//style->WindowMinSize = ImVec2(700, 400);
 	//style->WindowMinSize = ImVec2(imgui_window_width, imgui_window_height);
 	style->WindowTitleAlign = ImVec2(0.5, 0.5);
 	style->AntiAliasedFill = true;
