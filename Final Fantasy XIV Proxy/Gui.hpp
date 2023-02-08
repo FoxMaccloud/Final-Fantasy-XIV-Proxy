@@ -14,4 +14,8 @@ public:
 
 private:
 	Proxy m_proxy;
+	bool m_showConsole;
+	bool m_showLuaEditor;
+
+	void Menu();
 };

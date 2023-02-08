@@ -425,6 +425,7 @@ void Proxy::DrawConsole()
 
 void Proxy::DrawLuaEditor()
 {
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(200, 200));
 	ImGui::Begin("Lua Editor", nullptr, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
 	
 	if (ImGui::BeginMenuBar())
@@ -471,13 +472,12 @@ void Proxy::DrawLuaEditor()
 		if (m_luaEditorData.empty())
 			m_luaEditorData.push_back('\0');
 
-		//ImGui::Columns(2);
+		//ImGui::Columns(2, NULL, false);
 		//ImGui::SetColumnOffset(1, 40);
 		//{
-		//	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.01f, 1));
 		//	for (size_t i = 0; i < textLines; i++)
 		//	{
-		//		std::string line = std::to_string(i);
+		//		std::string line = std::to_string(i + 1);
 		//		std::string lineNum = "";
 		//		int lineStrWidth = strlen(line.c_str());
 
@@ -488,13 +488,15 @@ void Proxy::DrawLuaEditor()
 		//		lineNum += line;
 		//		ImGui::Text(lineNum.c_str());
 		//	}
-		//	ImGui::PopStyleVar();
 		//}
 		//ImGui::NextColumn();
 		//{
+			//ImGui::BeginChild("##TextEditor", ImVec2(0, 0), true);
 			auto luaEditorFlags = ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackResize;
 			ImGui::InputTextMultiline("##LuaEditor", m_luaEditorData.data(), m_luaEditorData.size(), ImVec2(ImGui::GetWindowContentRegionWidth(), ImGui::GetWindowHeight() - (ImGui::GetTextLineHeight() * 8)), luaEditorFlags, ResizeInputTextCallback, &m_luaEditorData);
+			//ImGui::EndChild();
 		//}
 	}
+	ImGui::PopStyleVar();
 	ImGui::End();
 }
