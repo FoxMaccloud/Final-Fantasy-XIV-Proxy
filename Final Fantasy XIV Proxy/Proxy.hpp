@@ -9,12 +9,13 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <functional>
+#include <unordered_set>
+#include <optional>
 
 #include "HelperFunctions.hpp"
 #include "Console.hpp"
 #include "Hook.hpp"
 #include "MinHook.h"
-#include <unordered_set>
 
 class Proxy
 {
@@ -52,9 +53,6 @@ private:
 	std::vector<std::string> m_commandsHistory;
 	uint32_t m_maxLogSize = 2000;
 	ImGuiTextFilter m_filter;
-
-	bool m_logSend;
-	bool m_logRecv;
 
 	bool m_copyToClipboard;
 	bool m_autoScroll;

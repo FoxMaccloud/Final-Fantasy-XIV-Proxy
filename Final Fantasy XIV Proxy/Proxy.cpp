@@ -7,7 +7,10 @@ SOCKET g_thisSocketSend;
 const char* g_thisBufferSend;
 uintptr_t g_thisLenSend;
 
-std::vector<char> HexToBytes(std::string hexString);
+bool g_logSend;
+bool g_logRecv;
+
+std::optional<std::vector<char>> HexToBytes(std::string hexString);
 char const hexChars[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 std::vector<Proxy::LogInput> g_packets;
@@ -46,7 +49,10 @@ static int PASCAL FAR hkSend(SOCKET s, const char* buf, int len, int flags)
 	g_thisBufferSend = buf;
 	g_thisLenSend = len;
 
-	AddPacket({ s, buf, len, flags });
+	if (g_logSend)
+	{
+		AddPacket({ s, buf, len, flags });
+	}
 
 	return oSend(s, buf, len, flags);
 }
@@ -67,10 +73,13 @@ void Proxy::InitConsole()
 	RegisterCommand("help", [this](const std::vector<std::string>& args) { Help(); });
 	RegisterCommand("history", [this](const std::vector<std::string>& args) { History(); });
 	RegisterCommand("clear", [this](const std::vector<std::string>& args) { ClearLog(); });
-	RegisterCommand("send", [this](const std::vector<std::string>& args) { SendPacket(HexToBytes(args.at(1)).data()); });
+	RegisterCommand("send", [this](const std::vector<std::string>& args) {
+		auto bytes = HexToBytes(args.at(1));
+		if (bytes)
+			SendPacket(bytes->data()); });
 	AddLog({ "", "", "Welcome!", 0, 0 });
-	m_logSend = false;
-	m_logRecv = false;
+	g_logSend = false;
+	g_logRecv = false;
 	m_copyToClipboard = false;
 	m_autoScroll = true;
 	m_scrollToBottom = false;
@@ -122,12 +131,12 @@ Proxy::~Proxy()
 }
 
 
-std::vector<char> HexToBytes(std::string hexString)
+std::optional<std::vector<char>> HexToBytes(std::string hexString)
 {
 	size_t packetLen = strlen(hexString.c_str());
 	if (packetLen <= 0)
 	{
-		return std::vector<char>(0);
+		return std::nullopt;
 	}
 
 	bool hexPrefix = false;
@@ -139,7 +148,7 @@ std::vector<char> HexToBytes(std::string hexString)
 			(hexString.find_first_not_of("0123456789ABCDEF", 2) != std::string::npos))
 		{
 			AddLog({ "[ERROR]", "", "Please only hex characters in send\n0x123ABC", NULL, NULL });
-			return std::vector<char>(0);
+			return std::nullopt;
 		}
 	}
 	else
@@ -147,7 +156,7 @@ std::vector<char> HexToBytes(std::string hexString)
 		if (hexString.find_first_not_of("0123456789ABCDEF", 0) != std::string::npos)
 		{
 			AddLog({ "[ERROR]", "", "Please only hex characters in send\n123ABC", NULL, NULL });
-			return std::vector<char>(0);
+			return std::nullopt;
 		}
 	}
 
@@ -159,7 +168,7 @@ std::vector<char> HexToBytes(std::string hexString)
 	if (packetLen % 2 != 0)
 	{
 		AddLog({ "[ERROR]", "", "Odd packet length", NULL, NULL });
-		return std::vector<char>(0);
+		return std::nullopt;
 	}
 	packetLen = packetLen / 2;
 
@@ -190,6 +199,8 @@ std::vector<char> HexToBytes(std::string hexString)
 		sendBuffer[i] += (__int8)sendBuffer[count];
 	}
 	sendBuffer[i] = '\0';
+
+	LOG("[!] Sendbuffer %s\n", sendBuffer.data());
 
 	return sendBuffer;
 }
@@ -248,10 +259,28 @@ void Proxy::ExecuteCommand(std::string command)
 	std::string segment;
 	while (std::getline(commandStream, segment, ' '))
 		commandArgs.push_back(segment);
+	
+	int commandArgsSize = commandArgs.size();
 
-	if (commandArgs.size() == 0)
+	if (std::find(commandArgs.begin(), commandArgs.end(), commandArgs.at(0)) != commandArgs.end())
 	{
-		SendPacket(HexToBytes(commandArgs.at(1)).data());
+		if (commandArgsSize == 1)
+			AddLog({ commandArgs.at(0), "", "", NULL, NULL});
+		if (commandArgsSize == 2)
+		{
+			std::string data = commandArgs.at(1);
+			if (data.compare(0, 2, "0x") == 0)
+				AddLog({ commandArgs.at(0), "", data, static_cast<int>(commandArgs.at(1).size()-2), NULL });
+			else
+				AddLog({ commandArgs.at(0), "", data, static_cast<int>(commandArgs.at(1).size()), NULL });
+		}
+	}
+
+	if (commandArgsSize == 0)
+	{
+		auto bytes = HexToBytes(commandArgs.at(1));
+		if (bytes)
+			SendPacket(bytes->data());
 		return;
 	}
 
@@ -266,9 +295,9 @@ void Proxy::ExecuteCommand(std::string command)
 
 void Proxy::DrawConsole()
 {
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(700, 400));
 	ImGui::Begin("Proxy", nullptr, ImGuiWindowFlags_MenuBar);
 	{
-		
 		if (ImGui::BeginMenuBar())
 		{
 			if (ImGui::BeginMenu("File"))
@@ -284,8 +313,8 @@ void Proxy::DrawConsole()
 			}
 			ImGui::EndMenuBar();
 		}
-		ImGui::Checkbox("Log Send", &m_logSend);
-		ImGui::SameLine(); ImGui::Checkbox("Log Recv", &m_logRecv);
+		ImGui::Checkbox("Log Send", &g_logSend);
+		ImGui::SameLine(); ImGui::Checkbox("Log Recv", &g_logRecv);
 		ImGui::SameLine(); ImGui::Checkbox("Auto-scoll", &m_autoScroll);
 		ImGui::SameLine(); m_filter.Draw("Filter (\"incl,-excl\") (\"error\")", 180);
 		ImGui::Separator();
@@ -300,8 +329,8 @@ void Proxy::DrawConsole()
 			float windowWidth = ImGui::GetWindowContentRegionWidth();
 			float nameWidth = (static_cast<float>((700 * 10)) / 100); // 700 -> min window size
 			float opcodeWidth = (static_cast<float>((700 * 10)) / 100);
-			float sizeWith = (static_cast<float>((700 * 10)) / 100);
-			float timeWidth = (static_cast<float>((700 * 15)) / 100);
+			float sizeWith = (static_cast<float>((700 * 7)) / 100);
+			float timeWidth = (static_cast<float>((700 * 18)) / 100);
 			float dataWidth = windowWidth - nameWidth - opcodeWidth - sizeWith - timeWidth;
 			if (ImGui::BeginTable("Packets", 5, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersInner | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY))
 			{
@@ -391,6 +420,7 @@ void Proxy::DrawConsole()
 			ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
 	}
 	ImGui::End();
+	ImGui::PopStyleVar();
 }
 
 void Proxy::DrawLuaEditor()
