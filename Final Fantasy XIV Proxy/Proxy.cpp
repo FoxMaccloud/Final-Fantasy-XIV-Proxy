@@ -252,6 +252,9 @@ void Proxy::History()
 
 void Proxy::ExecuteCommand(std::string command)
 {
+	if (command.empty())
+		return;
+
 	m_commandsHistory.push_back(command);
 	std::vector<std::string> commandArgs;
 

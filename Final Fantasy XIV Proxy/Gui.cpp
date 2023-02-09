@@ -12,11 +12,28 @@ Gui::~Gui()
 
 void Gui::Menu()
 {
-
+	if (ImGui::BeginMainMenuBar())
+	{
+		if (ImGui::BeginMenu("Proxy"))
+		{
+			if (ImGui::MenuItem("Show proxy", NULL, &m_showConsole));
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Lua"))
+		{
+			if (ImGui::MenuItem("Lua Editor", NULL, &m_showLuaEditor));
+			ImGui::Separator();
+			if (ImGui::MenuItem("Lua Proxy API")) {}
+			ImGui::EndMenu();
+		}
+		ImGui::EndMainMenuBar();
+	}
 }
+
 
 void Gui::Render()
 {
+	Menu();
 	if (m_showConsole)
 		m_proxy.DrawConsole();
 	if (m_showLuaEditor)
