@@ -10,7 +10,7 @@ uintptr_t g_thisLenSend;
 bool g_logSend;
 bool g_logRecv;
 
-std::optional<std::vector<char>> HexToBytes(std::string hexString);
+std::optional<std::vector<std::uint8_t>> HexToBytes(std::string hexString);
 char const hexChars[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 std::vector<Proxy::LogInput> g_packets;
@@ -74,9 +74,9 @@ void Proxy::InitConsole()
 	RegisterCommand("history", [this](const std::vector<std::string>& args) { History(); });
 	RegisterCommand("clear", [this](const std::vector<std::string>& args) { ClearLog(); });
 	RegisterCommand("send", [this](const std::vector<std::string>& args) {
-		auto bytes = HexToBytes(args.at(1));
-		if (bytes)
-			SendPacket(bytes->data()); });
+	auto bytes = HexToBytes(args.at(1));
+	if (bytes)
+		SendPacket(bytes.value());});
 	AddLog({ "", "", "Welcome!", 0, 0 });
 	g_logSend = false;
 	g_logRecv = false;
@@ -88,6 +88,8 @@ void Proxy::InitConsole()
 
 void Proxy::InitLuaEditor()
 {
+	m_luaState = luaL_newstate();
+	luaL_openlibs(m_luaState);
 	static const char* const keywords[] = {
 	"and", "break", "do", "", "else", "elseif", "end", "false", "for", "function", "if", "in", "", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while"
 	};
@@ -112,7 +114,6 @@ void Proxy::InitLuaEditor()
 
 	// TODO: make identifiers for comments etc.
 	m_textChange = false;
-	m_run = false;
 }
 
 Proxy::Proxy()
@@ -128,10 +129,11 @@ Proxy::Proxy()
 Proxy::~Proxy()
 {
 	ClearLog();
+	lua_close(m_luaState);
 }
 
 
-std::optional<std::vector<char>> HexToBytes(std::string hexString)
+std::optional<std::vector<std::uint8_t>> HexToBytes(std::string hexString)
 {
 	size_t packetLen = strlen(hexString.c_str());
 	if (packetLen <= 0)
@@ -142,77 +144,76 @@ std::optional<std::vector<char>> HexToBytes(std::string hexString)
 	bool hexPrefix = false;
 	if (hexString.compare(0, 2, "0x") == 0)
 		hexPrefix = true;
-	if (hexPrefix)
-	{
-		if ((hexString.size() > 2) &&
-			(hexString.find_first_not_of("0123456789ABCDEF", 2) != std::string::npos))
-		{
-			AddLog({ "[ERROR]", "", "Please only hex characters in send\n0x123ABC", NULL, NULL });
-			return std::nullopt;
-		}
-	}
-	else
-	{
-		if (hexString.find_first_not_of("0123456789ABCDEF", 0) != std::string::npos)
-		{
-			AddLog({ "[ERROR]", "", "Please only hex characters in send\n123ABC", NULL, NULL });
-			return std::nullopt;
-		}
-	}
-
+	
 	if (hexPrefix)
 	{
 		hexString.erase(0, 2);
 	}
-
+	if (hexString.find_first_not_of("0123456789abcdefABCDEF", 0) != std::string::npos)
+	{
+		AddLog({ "[ERROR]", "", "Please only hex characters in send\n123ABC", NULL, NULL });
+		return std::nullopt;
+	}
 	if (packetLen % 2 != 0)
 	{
 		AddLog({ "[ERROR]", "", "Odd packet length", NULL, NULL });
 		return std::nullopt;
 	}
-	packetLen = packetLen / 2;
 
-	std::vector<char> sendBuffer(packetLen);
-	
-	size_t i = 0;
-	for (size_t count = 1; count < packetLen; ++i, count += 2)
+	std::vector<std::uint8_t> byteArray;
+
+	for (std::size_t i = 0; i < hexString.size(); i += 2)
 	{
-		if (sendBuffer[count-1] >= 'A')
-		{
-			sendBuffer[count-1] -= 'A';
-			sendBuffer[count-1] += 10;
-		}
-		else
-		{
-			sendBuffer[count-1] -= 48;
-		}
-		if (sendBuffer[count] >= 'A')
-		{
-			sendBuffer[count] -= 'A';
-			sendBuffer[count] += 10;
-		}
-		else
-		{
-			sendBuffer[count] -= 48;
-		}
-		sendBuffer[i] = (__int8)(((char)sendBuffer[count-1]) * (char)16);
-		sendBuffer[i] += (__int8)sendBuffer[count];
+		std::string hexByte = hexString.substr(i, 2);
+		std::uint8_t byte = std::stoi(hexByte, nullptr, 16);
+		byteArray.push_back(byte);
 	}
-	sendBuffer[i] = '\0';
+	LOG("[!] Sendbuffer %s\n", byteArray.data());
+	return byteArray;
 
-	LOG("[!] Sendbuffer %s\n", sendBuffer.data());
+	//std::vector<char> sendBuffer(packetLen);
+	//
+	//size_t i = 0;
+	//for (size_t count = 1; count < packetLen; ++i, count += 2)
+	//{
+	//	if (sendBuffer[count-1] >= 'A')
+	//	{
+	//		sendBuffer[count-1] -= 'A';
+	//		sendBuffer[count-1] += 10;
+	//	}
+	//	else
+	//	{
+	//		sendBuffer[count-1] -= 48;
+	//	}
+	//	if (sendBuffer[count] >= 'A')
+	//	{
+	//		sendBuffer[count] -= 'A';
+	//		sendBuffer[count] += 10;
+	//	}
+	//	else
+	//	{
+	//		sendBuffer[count] -= 48;
+	//	}
+	//	sendBuffer[i] = (__int8)(((char)sendBuffer[count-1]) * (char)16);
+	//	sendBuffer[i] += (__int8)sendBuffer[count];
+	//}
+	//sendBuffer[i] = '\0';
 
-	return sendBuffer;
+	//LOG("[!] Sendbuffer %s\n", sendBuffer.data());
+
+	//return sendBuffer;
 }
 
-void Proxy::SendPacket(const char* packet)
+void Proxy::SendPacket(std::vector<std::uint8_t> packet)
 {
-	if ((!packet) || (sizeof(packet) < 2)) // Get the size of the packet struct instead of a dumb value like 2...
+	if (packet.size() < 2) // replace with min struct size
+	{
 		return;
+	}
 
 	if (g_thisSocketSend)
 	{
-		oSend(g_thisSocketSend, packet, sizeof(packet), NULL);
+		oSend(g_thisSocketSend, (const char*)packet.data(), packet.size(), NULL);
 		return;
 	}
 	LOG("[!] No socket was found!\n");
@@ -283,7 +284,7 @@ void Proxy::ExecuteCommand(std::string command)
 	{
 		auto bytes = HexToBytes(commandArgs.at(1));
 		if (bytes)
-			SendPacket(bytes->data());
+			SendPacket(bytes.value());
 		return;
 	}
 
@@ -426,9 +427,38 @@ void Proxy::DrawConsole()
 	ImGui::PopStyleVar();
 }
 
+std::string Proxy::ExecuteLua()
+{
+	// Load the Lua code from the string
+	std::string luaCode(m_luaEditorData.data());
+
+	// Create a Lua state
+	sol::state lua;
+
+	// Load standard Lua libraries
+	lua.open_libraries(sol::lib::base, sol::lib::package, sol::lib::string, sol::lib::table);
+
+	// Execute the Lua code and store the result
+	sol::protected_function_result result = lua.script(luaCode);
+
+	// Check for errors
+	if (!result.valid())
+	{
+		sol::error error = result;
+		std::string errorMsg = error.what();
+		return "Lua error: " + errorMsg;
+	}
+
+	// Get the result as a string
+	std::string output = lua["tostring"](result.get<sol::object>());
+
+	// Return the output
+	return output;
+}
+
 void Proxy::DrawLuaEditor()
 {
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(200, 200));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(550, 300));
 	ImGui::Begin("Lua Editor", nullptr, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
 	
 	if (ImGui::BeginMenuBar())
@@ -462,7 +492,10 @@ void Proxy::DrawLuaEditor()
 	std::string headerText = std::to_string(textLines) + " lines";
 	ImGui::Text(headerText.c_str());
 
-	ImGui::SameLine(); ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() - 52); m_run = ImGui::Button("Run", ImVec2(60, 19));
+	static std::string luaOutput;
+	ImGui::SameLine(); ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() - 52);
+	if (ImGui::Button("Run", ImVec2(60, 19)))
+		luaOutput = ExecuteLua();
 
 	// Main Text area
 	// TODO:
@@ -496,9 +529,13 @@ void Proxy::DrawLuaEditor()
 		//{
 			//ImGui::BeginChild("##TextEditor", ImVec2(0, 0), true);
 			auto luaEditorFlags = ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackResize;
-			ImGui::InputTextMultiline("##LuaEditor", m_luaEditorData.data(), m_luaEditorData.size(), ImVec2(ImGui::GetWindowContentRegionWidth(), ImGui::GetWindowHeight() - (ImGui::GetTextLineHeight() * 8)), luaEditorFlags, ResizeInputTextCallback, &m_luaEditorData);
+			ImGui::InputTextMultiline("##LuaEditor", m_luaEditorData.data(), m_luaEditorData.size(), ImVec2(ImGui::GetWindowContentRegionWidth(), ImGui::GetWindowHeight() - (ImGui::GetTextLineHeight() * 16)), luaEditorFlags, ResizeInputTextCallback, &m_luaEditorData);
 			//ImGui::EndChild();
 		//}
+			ImGui::Separator();
+			ImGui::BeginChild("##LuaOutput", ImVec2(0, 0), true);
+			ImGui::Text(luaOutput.c_str());
+			ImGui::EndChild();
 	}
 	ImGui::PopStyleVar();
 	ImGui::End();

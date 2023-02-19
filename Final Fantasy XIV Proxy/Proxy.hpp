@@ -12,6 +12,10 @@
 #include <unordered_set>
 #include <optional>
 
+#include <lua.hpp>
+#include <sol.hpp>
+#pragma(lib, "lua54.lib")
+
 #include "HelperFunctions.hpp"
 #include "Console.hpp"
 #include "Hook.hpp"
@@ -23,7 +27,7 @@ class Proxy
 public:
 	Proxy();
 	~Proxy();
-	void SendPacket(const char* packet);
+	void SendPacket(std::vector<std::uint8_t> packet);
 
 	struct Packet
 	{
@@ -70,11 +74,11 @@ public:
 	void DrawLuaEditor();
 
 private:
+	std::string ExecuteLua();
+	lua_State* m_luaState;
 	Identifiers m_identifiers;
 	Keywords m_keywords;
 	std::vector<char> m_luaEditorData;
 	bool m_textChange;
-
-	bool m_run;
 
 };
