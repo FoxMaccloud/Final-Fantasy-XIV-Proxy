@@ -22,6 +22,9 @@
     <Filter Include="Lua">
       <UniqueIdentifier>{8761b0b7-ee0c-491e-a6b0-323922abc7b2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Lua\Sol">
+      <UniqueIdentifier>{12c31247-eb9d-4711-a5e5-d601ce9ba996}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -142,6 +145,30 @@
     </ClInclude>
     <ClInclude Include="Proxy.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lua\include\lauxlib.h">
+      <Filter>Lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lua\include\lua.h">
+      <Filter>Lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lua\include\lua.hpp">
+      <Filter>Lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lua\include\luaconf.h">
+      <Filter>Lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\lua\include\lualib.h">
+      <Filter>Lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\sol\config.hpp">
+      <Filter>Lua\Sol</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\sol\forward.hpp">
+      <Filter>Lua\Sol</Filter>
+    </ClInclude>
+    <ClInclude Include="lua\sol\sol.hpp">
+      <Filter>Lua\Sol</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

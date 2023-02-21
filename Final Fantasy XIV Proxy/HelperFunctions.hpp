@@ -4,8 +4,11 @@
 #include <iostream>
 #include <Psapi.h>
 #include <vector>
-#include <array>
 #include <string>
+#include <cstdint>
+#include <utility>
+#include <array>
+#include <numeric>
 
 #define PROCESS L"ffxiv_dx11.exe"
 
@@ -37,4 +40,7 @@ namespace HelperFunctions
 	HWND FindMainWindow();
 	HWND GetProcessWindow();
 	bool WorldToScreen(vec3 pos, vec2& screen, float matrix[16], int m_windowWidth, int m_windowHeight);
+
+	template <typename... Pack>
+	__forceinline auto MakeShellcode(Pack&&... args);
 };

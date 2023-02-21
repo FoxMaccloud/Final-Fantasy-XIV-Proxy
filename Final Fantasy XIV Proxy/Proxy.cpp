@@ -213,7 +213,7 @@ void Proxy::SendPacket(std::vector<std::uint8_t> packet)
 
 	if (g_thisSocketSend)
 	{
-		oSend(g_thisSocketSend, (const char*)packet.data(), packet.size(), NULL);
+		oSend(g_thisSocketSend, (const char*)packet.data(), packet.size(), 0);
 		return;
 	}
 	LOG("[!] No socket was found!\n");
@@ -264,7 +264,7 @@ void Proxy::ExecuteCommand(std::string command)
 	while (std::getline(commandStream, segment, ' '))
 		commandArgs.push_back(segment);
 	
-	int commandArgsSize = commandArgs.size();
+	size_t commandArgsSize = commandArgs.size();
 
 	if (std::find(commandArgs.begin(), commandArgs.end(), commandArgs.at(0)) != commandArgs.end())
 	{
@@ -436,7 +436,7 @@ std::string Proxy::ExecuteLua()
 	sol::state lua;
 
 	// Load standard Lua libraries
-	lua.open_libraries(sol::lib::base, sol::lib::package, sol::lib::string, sol::lib::table);
+	lua.open_libraries(sol::lib::base, sol::lib::package, sol::lib::string, sol::lib::table, sol::lib::jit);
 
 	// Execute the Lua code and store the result
 	sol::protected_function_result result = lua.script(luaCode);
@@ -460,7 +460,7 @@ void Proxy::DrawLuaEditor()
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(550, 300));
 	ImGui::Begin("Lua Editor", nullptr, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
-	
+
 	if (ImGui::BeginMenuBar())
 	{
 		if (ImGui::BeginMenu("File"))
@@ -476,7 +476,6 @@ void Proxy::DrawLuaEditor()
 			ImGui::Text("Nothing to see here yet!");
 			ImGui::EndMenu();
 		}
-
 		if (ImGui::BeginMenu("View"))
 		{
 			ImGui::Text("Nothing to see here yet!");
@@ -528,14 +527,14 @@ void Proxy::DrawLuaEditor()
 		//ImGui::NextColumn();
 		//{
 			//ImGui::BeginChild("##TextEditor", ImVec2(0, 0), true);
-			auto luaEditorFlags = ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackResize;
-			ImGui::InputTextMultiline("##LuaEditor", m_luaEditorData.data(), m_luaEditorData.size(), ImVec2(ImGui::GetWindowContentRegionWidth(), ImGui::GetWindowHeight() - (ImGui::GetTextLineHeight() * 16)), luaEditorFlags, ResizeInputTextCallback, &m_luaEditorData);
-			//ImGui::EndChild();
-		//}
-			ImGui::Separator();
-			ImGui::BeginChild("##LuaOutput", ImVec2(0, 0), true);
-			ImGui::Text(luaOutput.c_str());
-			ImGui::EndChild();
+		auto luaEditorFlags = ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackResize;
+		ImGui::InputTextMultiline("##LuaEditor", m_luaEditorData.data(), m_luaEditorData.size(), ImVec2(ImGui::GetWindowContentRegionWidth(), ImGui::GetWindowHeight() - (ImGui::GetTextLineHeight() * 16)), luaEditorFlags, ResizeInputTextCallback, &m_luaEditorData);
+		//ImGui::EndChild();
+	//}
+		ImGui::Separator();
+		ImGui::BeginChild("##LuaOutput", ImVec2(0, 0), true);
+		ImGui::Text(luaOutput.c_str());
+		ImGui::EndChild();
 	}
 	ImGui::PopStyleVar();
 	ImGui::End();
