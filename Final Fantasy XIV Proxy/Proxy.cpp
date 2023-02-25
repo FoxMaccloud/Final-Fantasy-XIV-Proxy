@@ -15,6 +15,8 @@ char const hexChars[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A
 
 std::vector<Proxy::LogInput> g_packets;
 
+std::string g_luaOutput;
+
 static void AddLog(Proxy::LogInput logInput)
 {
 	logInput.timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
@@ -88,22 +90,20 @@ void Proxy::InitConsole()
 
 void Proxy::InitLuaEditor()
 {
-	m_luaState = luaL_newstate();
-	luaL_openlibs(m_luaState);
 	static const char* const keywords[] = {
-	"and", "break", "do", "", "else", "elseif", "end", "false", "for", "function", "if", "in", "", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while"
+		"and", "break", "do", "", "else", "elseif", "end", "false", "for", "function", "if", "in", "", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while"
 	};
 	static const char* const identifiers[] = {
-	"assert", "collectgarbage", "dofile", "error", "getmetatable", "ipairs", "loadfile", "load", "loadstring",  "next",  "pairs",  "pcall",  "print",  "rawequal",  "rawlen",  "rawget",  "rawset",
-	"select",  "setmetatable",  "tonumber",  "tostring",  "type",  "xpcall",  "_G",  "_VERSION","arshift", "band", "bnot", "bor", "bxor", "btest", "extract", "lrotate", "lshift", "replace",
-	"rrotate", "rshift", "create", "resume", "running", "status", "wrap", "yield", "isyieldable", "debug","getuservalue", "gethook", "getinfo", "getlocal", "getregistry", "getmetatable",
-	"getupvalue", "upvaluejoin", "upvalueid", "setuservalue", "sethook", "setlocal", "setmetatable", "setupvalue", "traceback", "close", "flush", "input", "lines", "open", "output", "popen",
-	"read", "tmpfile", "type", "write", "close", "flush", "lines", "read", "seek", "setvbuf", "write", "__gc", "__tostring", "abs", "acos", "asin", "atan", "ceil", "cos", "deg", "exp", "tointeger",
-	"floor", "fmod", "ult", "log", "max", "min", "modf", "rad", "random", "randomseed", "sin", "sqrt", "string", "tan", "type", "atan2", "cosh", "sinh", "tanh",
-	 "pow", "frexp", "ldexp", "log10", "pi", "huge", "maxinteger", "mininteger", "loadlib", "searchpath", "seeall", "preload", "cpath", "path", "searchers", "loaded", "module", "require", "clock",
-	 "date", "difftime", "execute", "exit", "getenv", "remove", "rename", "setlocale", "time", "tmpname", "byte", "char", "dump", "find", "format", "gmatch", "gsub", "len", "lower", "match", "rep",
-	 "reverse", "sub", "upper", "pack", "packsize", "unpack", "concat", "maxn", "insert", "pack", "unpack", "remove", "move", "sort", "offset", "codepoint", "char", "len", "codes", "charpattern",
-	 "coroutine", "table", "io", "os", "string", "utf8", "bit32", "math", "debug", "package"
+		"assert", "collectgarbage", "dofile", "error", "getmetatable", "ipairs", "loadfile", "load", "loadstring",  "next",  "pairs",  "pcall",  "print",  "rawequal",  "rawlen",  "rawget",  "rawset",
+		"select",  "setmetatable",  "tonumber",  "tostring",  "type",  "xpcall",  "_G",  "_VERSION","arshift", "band", "bnot", "bor", "bxor", "btest", "extract", "lrotate", "lshift", "replace",
+		"rrotate", "rshift", "create", "resume", "running", "status", "wrap", "yield", "isyieldable", "debug","getuservalue", "gethook", "getinfo", "getlocal", "getregistry", "getmetatable",
+		"getupvalue", "upvaluejoin", "upvalueid", "setuservalue", "sethook", "setlocal", "setmetatable", "setupvalue", "traceback", "close", "flush", "input", "lines", "open", "output", "popen",
+		"read", "tmpfile", "type", "write", "close", "flush", "lines", "read", "seek", "setvbuf", "write", "__gc", "__tostring", "abs", "acos", "asin", "atan", "ceil", "cos", "deg", "exp", "tointeger",
+		"floor", "fmod", "ult", "log", "max", "min", "modf", "rad", "random", "randomseed", "sin", "sqrt", "string", "tan", "type", "atan2", "cosh", "sinh", "tanh",
+		"pow", "frexp", "ldexp", "log10", "pi", "huge", "maxinteger", "mininteger", "loadlib", "searchpath", "seeall", "preload", "cpath", "path", "searchers", "loaded", "module", "require", "clock",
+		"date", "difftime", "execute", "exit", "getenv", "remove", "rename", "setlocale", "time", "tmpname", "byte", "char", "dump", "find", "format", "gmatch", "gsub", "len", "lower", "match", "rep",
+		"reverse", "sub", "upper", "pack", "packsize", "unpack", "concat", "maxn", "insert", "pack", "unpack", "remove", "move", "sort", "offset", "codepoint", "char", "len", "codes", "charpattern",
+		"coroutine", "table", "io", "os", "string", "utf8", "bit32", "math", "debug", "package"
 	};
 
 	for (auto& k : keywords)
@@ -129,7 +129,7 @@ Proxy::Proxy()
 Proxy::~Proxy()
 {
 	ClearLog();
-	lua_close(m_luaState);
+	//lua_close(m_luaState);
 }
 
 
@@ -170,38 +170,6 @@ std::optional<std::vector<std::uint8_t>> HexToBytes(std::string hexString)
 	}
 	LOG("[!] Sendbuffer %s\n", byteArray.data());
 	return byteArray;
-
-	//std::vector<char> sendBuffer(packetLen);
-	//
-	//size_t i = 0;
-	//for (size_t count = 1; count < packetLen; ++i, count += 2)
-	//{
-	//	if (sendBuffer[count-1] >= 'A')
-	//	{
-	//		sendBuffer[count-1] -= 'A';
-	//		sendBuffer[count-1] += 10;
-	//	}
-	//	else
-	//	{
-	//		sendBuffer[count-1] -= 48;
-	//	}
-	//	if (sendBuffer[count] >= 'A')
-	//	{
-	//		sendBuffer[count] -= 'A';
-	//		sendBuffer[count] += 10;
-	//	}
-	//	else
-	//	{
-	//		sendBuffer[count] -= 48;
-	//	}
-	//	sendBuffer[i] = (__int8)(((char)sendBuffer[count-1]) * (char)16);
-	//	sendBuffer[i] += (__int8)sendBuffer[count];
-	//}
-	//sendBuffer[i] = '\0';
-
-	//LOG("[!] Sendbuffer %s\n", sendBuffer.data());
-
-	//return sendBuffer;
 }
 
 void Proxy::SendPacket(std::vector<std::uint8_t> packet)
@@ -427,6 +395,13 @@ void Proxy::DrawConsole()
 	ImGui::PopStyleVar();
 }
 
+int print(lua_State* L)
+{
+	std::string printString = lua_tostring(L, 1);
+	g_luaOutput += printString + "\n";
+	return 1;
+}
+
 std::string Proxy::ExecuteLua()
 {
 	// Load the Lua code from the string
@@ -437,6 +412,8 @@ std::string Proxy::ExecuteLua()
 
 	// Load standard Lua libraries
 	lua.open_libraries(sol::lib::base, sol::lib::package, sol::lib::string, sol::lib::table, sol::lib::jit);
+
+	lua.set_function("print", print);
 
 	// Execute the Lua code and store the result
 	sol::protected_function_result result = lua.script(luaCode);
@@ -491,10 +468,14 @@ void Proxy::DrawLuaEditor()
 	std::string headerText = std::to_string(textLines) + " lines";
 	ImGui::Text(headerText.c_str());
 
-	static std::string luaOutput;
 	ImGui::SameLine(); ImGui::SetCursorPosX(ImGui::GetWindowContentRegionWidth() - 52);
 	if (ImGui::Button("Run", ImVec2(60, 19)))
-		luaOutput = ExecuteLua();
+	{
+		g_luaOutput = "";
+		g_luaOutput += "Running script!\n";
+		auto returnVal = ExecuteLua();
+		g_luaOutput += "\n" + returnVal;
+	}
 
 	// Main Text area
 	// TODO:
@@ -507,33 +488,12 @@ void Proxy::DrawLuaEditor()
 		if (m_luaEditorData.empty())
 			m_luaEditorData.push_back('\0');
 
-		//ImGui::Columns(2, NULL, false);
-		//ImGui::SetColumnOffset(1, 40);
-		//{
-		//	for (size_t i = 0; i < textLines; i++)
-		//	{
-		//		std::string line = std::to_string(i + 1);
-		//		std::string lineNum = "";
-		//		int lineStrWidth = strlen(line.c_str());
-
-		//		if (lineStrWidth == 1) lineNum += "   ";
-		//		if (lineStrWidth == 2) lineNum += "  ";
-		//		if (lineStrWidth == 3) lineNum += " ";
-		//		if (lineStrWidth == 4) lineNum += "";
-		//		lineNum += line;
-		//		ImGui::Text(lineNum.c_str());
-		//	}
-		//}
-		//ImGui::NextColumn();
-		//{
-			//ImGui::BeginChild("##TextEditor", ImVec2(0, 0), true);
 		auto luaEditorFlags = ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackResize;
 		ImGui::InputTextMultiline("##LuaEditor", m_luaEditorData.data(), m_luaEditorData.size(), ImVec2(ImGui::GetWindowContentRegionWidth(), ImGui::GetWindowHeight() - (ImGui::GetTextLineHeight() * 16)), luaEditorFlags, ResizeInputTextCallback, &m_luaEditorData);
-		//ImGui::EndChild();
-	//}
+
 		ImGui::Separator();
 		ImGui::BeginChild("##LuaOutput", ImVec2(0, 0), true);
-		ImGui::Text(luaOutput.c_str());
+		ImGui::Text(g_luaOutput.c_str());
 		ImGui::EndChild();
 	}
 	ImGui::PopStyleVar();

@@ -81,5 +81,4 @@ private:
 	std::vector<char> m_luaEditorData;
 	bool m_textChange;
 
-	
 };
