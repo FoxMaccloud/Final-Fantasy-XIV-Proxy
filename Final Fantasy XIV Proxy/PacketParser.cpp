@@ -8,7 +8,8 @@ PacketParser::~PacketParser()
 {
 }
 
-LogInput ParsePacket(std::vector<std::uint8_t> packetData)
+
+LogInput PacketParser::ParsePacket(std::vector<std::uint8_t> packetData)
 {
 	if (packetData.size() < sizeof(FFXIVARR_PACKET_HEADER))
 	{
@@ -22,19 +23,29 @@ LogInput ParsePacket(std::vector<std::uint8_t> packetData)
 	switch (segmentHeader->type)
 	{
 	case SEGMENTTYPE_SESSIONINIT:
+	{
 		break;
+	}
 	case SEGMENTTYPE_IPC:
+	{
 		// Read IPC header to determine packet type
-		FFXIVARR_IPC_HEADER* ipc_header = (FFXIVARR_IPC_HEADER*)(packetData.data() + sizeof(FFXIVARR_PACKET_HEADER) + sizeof(FFXIVARR_PACKET_SEGMENT_HEADER));
-		packetType = ipc_header->type;
+		FFXIVARR_IPC_HEADER* ipcHeader = (FFXIVARR_IPC_HEADER*)(packetData.data() + sizeof(FFXIVARR_PACKET_HEADER) + sizeof(FFXIVARR_PACKET_SEGMENT_HEADER));
+		packetType = ipcHeader->type;
 		break;
+	}
 	case SEGMENTTYPE_KEEPALIVE:
+	{
 		break;
+	}
 	case SEGMENTTYPE_ENCRYPTIONINIT:
+	{
 		break;
+	}
 	default:
+	{
 		return { "[ERROR]" , "", "unknown SEGMENT_TYPE!",0, 0 };
 		break;
+	}
 	}
 
 	std::string data = "";

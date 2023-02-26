@@ -19,7 +19,7 @@ public:
 	PacketParser();
 	~PacketParser();
 
-	LogInput ParsePacket(std::vector<std::uint8_t> data);
+	LogInput ParsePacket(std::vector<std::uint8_t> packetData);
 
 private:
 
