@@ -3,6 +3,8 @@
 #define OFFSET_SEND 0x2320
 #define OFFSET_RECV 0x11D90
 
+PacketParser g_packetParser;
+
 SOCKET g_thisSocketSend;
 const char* g_thisBufferSend;
 uintptr_t g_thisLenSend;
@@ -11,13 +13,12 @@ bool g_logSend;
 bool g_logRecv;
 
 std::optional<std::vector<std::uint8_t>> HexToBytes(std::string hexString);
-char const hexChars[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
-std::vector<Proxy::LogInput> g_packets;
+std::vector<LogInput> g_packets;
 
 std::string g_luaOutput;
 
-static void AddLog(Proxy::LogInput logInput)
+static void AddLog(LogInput logInput)
 {
 	logInput.timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 	g_packets.push_back(logInput);
@@ -26,16 +27,11 @@ static void AddLog(Proxy::LogInput logInput)
 static void AddPacket(Proxy::Packet packet)
 {
 	// TODO: implement packet parser and packet identifier
-	std::string packetId = "Unknwon";
-	std::string opcode = "0x1234";
-	std::string packetData;
-	for (int i = 0; i < packet.len; i++)
-	{
-		packetData += hexChars[(packet.buf[i] & 0xF0) >> 4];
-		packetData += hexChars[(packet.buf[i] & 0x0F) >> 0];
-	}
-
-	AddLog({ packetId, opcode, packetData, packet.len, NULL });
+	
+	auto start = (const std::uint8_t*)packet.buf;
+	auto parsedPacket = g_packetParser.ParsePacket(std::vector<std::uint8_t>(start, start + packet.len));
+	
+	AddLog(parsedPacket);
 }
 
 template<class Func>

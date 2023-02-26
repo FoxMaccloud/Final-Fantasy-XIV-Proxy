@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Console.hpp"
+
 #include <Windows.h>
 #include <iostream>
 #include <Psapi.h>
@@ -19,6 +21,7 @@
 
 
 constexpr float mapCoordScale = 70.0f;
+constexpr char hexChars[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 struct vec4
 {

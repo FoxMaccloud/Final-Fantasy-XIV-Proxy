@@ -17,9 +17,9 @@
 #pragma(lib, "lua54.lib")
 
 #include "HelperFunctions.hpp"
-#include "Console.hpp"
 #include "Hook.hpp"
 #include "MinHook.h"
+#include "PacketParser.hpp"
 
 class Proxy
 {
@@ -35,14 +35,6 @@ public:
 		const char* buf;
 		int len;
 		int flags;
-	};
-	struct LogInput
-	{
-		std::string packetId;
-		std::string opcode;
-		std::string packetData;
-		int sizeOfPacket;
-		time_t timestamp;
 	};
 
 	void InitConsole();
