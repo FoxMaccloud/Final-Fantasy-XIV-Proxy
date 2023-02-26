@@ -78,6 +78,9 @@
     <ClCompile Include="Proxy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PacketParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Console.hpp">
@@ -169,6 +172,9 @@
     </ClInclude>
     <ClInclude Include="lua\sol\sol.hpp">
       <Filter>Lua\Sol</Filter>
+    </ClInclude>
+    <ClInclude Include="PacketParser.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

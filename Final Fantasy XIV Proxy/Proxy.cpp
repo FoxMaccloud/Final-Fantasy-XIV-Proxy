@@ -395,41 +395,29 @@ void Proxy::DrawConsole()
 	ImGui::PopStyleVar();
 }
 
-int print(lua_State* L)
-{
-	std::string printString = lua_tostring(L, 1);
-	g_luaOutput += printString + "\n";
-	return 1;
-}
-
 std::string Proxy::ExecuteLua()
 {
-	// Load the Lua code from the string
+	auto print = [this](lua_State* L)
+	{
+		std::string printString = lua_tostring(L, 1);
+		g_luaOutput += printString + "\n";
+		return 1;
+	};
+
 	std::string luaCode(m_luaEditorData.data());
-
-	// Create a Lua state
 	sol::state lua;
-
-	// Load standard Lua libraries
 	lua.open_libraries(sol::lib::base, sol::lib::package, sol::lib::string, sol::lib::table, sol::lib::jit);
-
 	lua.set_function("print", print);
-
-	// Execute the Lua code and store the result
 	sol::protected_function_result result = lua.script(luaCode);
-
-	// Check for errors
+	
 	if (!result.valid())
 	{
 		sol::error error = result;
 		std::string errorMsg = error.what();
 		return "Lua error: " + errorMsg;
 	}
-
-	// Get the result as a string
+	
 	std::string output = lua["tostring"](result.get<sol::object>());
-
-	// Return the output
 	return output;
 }
 

@@ -163,6 +163,7 @@
     <ClCompile Include="minhook\src\hook.c" />
     <ClCompile Include="minhook\src\trampoline.c" />
     <ClCompile Include="Overlay.cpp" />
+    <ClCompile Include="PacketParser.cpp" />
     <ClCompile Include="Proxy.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -195,6 +196,7 @@
     <ClInclude Include="minhook\src\hde\table64.h" />
     <ClInclude Include="minhook\src\trampoline.h" />
     <ClInclude Include="Overlay.hpp" />
+    <ClInclude Include="PacketParser.hpp" />
     <ClInclude Include="Proxy.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

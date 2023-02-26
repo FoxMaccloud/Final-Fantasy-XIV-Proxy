@@ -30,7 +30,6 @@ void Gui::Menu()
 	}
 }
 
-
 void Gui::Render()
 {
 	Menu();
