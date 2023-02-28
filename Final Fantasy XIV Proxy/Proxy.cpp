@@ -28,9 +28,15 @@ static void AddPacket(Proxy::Packet packet)
 {
 	// TODO: implement packet parser and packet identifier
 	
-	auto start = (const std::uint8_t*)packet.buf;
+	auto start = (std::uint8_t*)packet.buf;
 	auto parsedPacket = g_packetParser.ParsePacket(std::vector<std::uint8_t>(start, start + packet.len));
 	
+	LOG("Parsed Packet:\n PakcetId: %s\n opcode: %s\n packetData: %s\n size %i\n",
+		parsedPacket.packetId,
+		parsedPacket.opcode,
+		parsedPacket.packetData,
+		parsedPacket.sizeOfPacket);
+
 	AddLog(parsedPacket);
 }
 

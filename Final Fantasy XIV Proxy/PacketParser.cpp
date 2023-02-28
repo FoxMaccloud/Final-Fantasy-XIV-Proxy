@@ -22,35 +22,42 @@ LogInput PacketParser::ParsePacket(std::vector<std::uint8_t> packetData)
 	uint16_t packetType = 0;
 	switch (segmentHeader->type)
 	{
-	case SEGMENTTYPE_SESSIONINIT:
-	{
-		break;
-	}
-	case SEGMENTTYPE_IPC:
-	{
-		// Read IPC header to determine packet type
-		FFXIVARR_IPC_HEADER* ipcHeader = (FFXIVARR_IPC_HEADER*)(packetData.data() + sizeof(FFXIVARR_PACKET_HEADER) + sizeof(FFXIVARR_PACKET_SEGMENT_HEADER));
-		packetType = ipcHeader->type;
-		break;
-	}
-	case SEGMENTTYPE_KEEPALIVE:
-	{
-		break;
-	}
-	case SEGMENTTYPE_ENCRYPTIONINIT:
-	{
-		break;
-	}
-	default:
-	{
-		return { "[ERROR]" , "", "unknown SEGMENT_TYPE!",0, 0 };
-		break;
-	}
+		case SEGMENTTYPE_SESSIONINIT:
+		{
+			break;
+		}
+		case SEGMENTTYPE_IPC:
+		{
+			// Read IPC header to determine packet type
+			FFXIVARR_IPC_HEADER* ipcHeader = (FFXIVARR_IPC_HEADER*)(packetData.data() + sizeof(FFXIVARR_PACKET_HEADER) + sizeof(FFXIVARR_PACKET_SEGMENT_HEADER));
+			packetType = ipcHeader->type;
+			LOG("[+] FOUND TYPE\n");
+			break;
+		}
+		case SEGMENTTYPE_KEEPALIVE:
+		{
+			break;
+		}
+		case SEGMENTTYPE_ENCRYPTIONINIT:
+		{
+			break;
+		}
+		default:
+		{
+			return { "[ERROR]" , "", "unknown SEGMENT_TYPE!",0, 0 };
+			break;
+		}
 	}
 
 	std::string data = "";
 	std::string packetId = "TODO";
-	std::string opcode = std::to_string(packetType);
+	std::string opcode = "";
+	if (packetType != 0)
+	{
+		std::stringstream opcodeStream;
+		opcodeStream << std::hex << packetType;
+		opcode = "0x" + opcodeStream.str();
+	}
 
 	for (int i = 0; i < packetData.size(); i++)
 	{
@@ -58,5 +65,5 @@ LogInput PacketParser::ParsePacket(std::vector<std::uint8_t> packetData)
 		data += hexChars[(packetData[i] & 0x0F) >> 0];
 	}
 
-	return { packetId, opcode, NULL, (int)packetData.size(), NULL};
+	return { packetId, opcode, data, (int)packetData.size(), NULL};
 }
