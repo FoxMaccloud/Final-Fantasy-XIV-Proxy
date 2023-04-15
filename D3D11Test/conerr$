@@ -1,0 +1,22 @@
+[sol2] An error occurred and has been passed to an error handler: sol: runtime error: [string "..."]:4: attempt to index a nil value (global 'math')
+stack traceback:
+	[string "..."]:4: in main chunk
+[sol2] An error occurred and has been passed to an error handler: sol: runtime error: [string "math = require('math')..."]:1: module 'math' not found:
+	no field package.preload['math']
+	no file 'C:\Users\FoxMaccloud\source\repos\Final Fantasy XIV Proxy\bin\Debug\lua\math.lua'
+	no file 'C:\Users\FoxMaccloud\source\repos\Final Fantasy XIV Proxy\bin\Debug\lua\math\init.lua'
+	no file 'C:\Users\FoxMaccloud\source\repos\Final Fantasy XIV Proxy\bin\Debug\math.lua'
+	no file 'C:\Users\FoxMaccloud\source\repos\Final Fantasy XIV Proxy\bin\Debug\math\init.lua'
+	no file 'C:\Users\FoxMaccloud\source\repos\Final Fantasy XIV Proxy\bin\Debug\..\share\lua\5.4\math.lua'
+	no file 'C:\Users\FoxMaccloud\source\repos\Final Fantasy XIV Proxy\bin\Debug\..\share\lua\5.4\math\init.lua'
+	no file '.\math.lua'
+	no file '.\math\init.lua'
+	no file 'C:\Users\FoxMaccloud\source\repos\Final Fantasy XIV Proxy\bin\Debug\math.dll'
+	no file 'C:\Users\FoxMaccloud\source\repos\Final Fantasy XIV Proxy\bin\Debug\..\lib\lua\5.4\math.dll'
+	no file 'C:\Users\FoxMaccloud\source\repos\Final Fantasy XIV Proxy\bin\Debug\loadall.dll'
+	no file '.\math.dll'
+	no file 'C:\Users\FoxMaccloud\source\repos\Final Fantasy XIV Proxy\bin\Debug\math54.dll'
+	no file '.\math54.dll'
+stack traceback:
+	[C]: in function 'base.require'
+	[string "math = require('math')..."]:1: in main chunk

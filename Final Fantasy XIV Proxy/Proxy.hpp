@@ -40,7 +40,6 @@ public:
 	void InitConsole();
 	void ClearLog();
 	void DrawConsole();
-	void RegisterCommand(const std::string& command, CommandCallback callback);
 	void ExecuteCommand(std::string command);
 
 private:

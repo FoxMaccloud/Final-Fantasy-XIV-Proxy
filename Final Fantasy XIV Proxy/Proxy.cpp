@@ -74,6 +74,11 @@ static int ResizeInputTextCallback(ImGuiInputTextCallbackData* data)
 
 void Proxy::InitConsole()
 {
+	auto RegisterCommand = [this](const std::string& command, CommandCallback callback)
+	{
+		m_commands.emplace(command, callback);
+	};
+
 	RegisterCommand("help", [this](const std::vector<std::string>& args) { Help(); });
 	RegisterCommand("history", [this](const std::vector<std::string>& args) { History(); });
 	RegisterCommand("clear", [this](const std::vector<std::string>& args) { ClearLog(); });
@@ -116,6 +121,33 @@ void Proxy::InitLuaEditor()
 
 	// TODO: make identifiers for comments etc.
 	m_textChange = false;
+
+	// Lua Editor
+	m_luaState.open_libraries(sol::lib::base, sol::lib::package, sol::lib::string, sol::lib::table, sol::lib::jit);
+
+	auto luaPrint = [&](sol::variadic_args args)
+	{
+		std::string printString = m_luaState["tostring"](args.get<sol::object>(0));
+		g_luaOutput += printString + "\n";
+	};
+	
+	auto luaSend = [&](sol::variadic_args args)
+	{
+		std::string packetArg = m_luaState["tostring"](args.get<sol::object>(0));
+		// look for packet in packet lookuptable.
+		g_luaOutput += "send has not been implemented yet!\n";
+	};
+	
+	auto luaRecv = [&](sol::variadic_args args)
+	{
+		std::string packetArg = m_luaState["tostring"](args.get<sol::object>(0));
+		// look for packet in packet lookuptable.
+		g_luaOutput += "send has not been implemented yet!\n";
+	};
+
+	m_luaState.set_function("print", luaPrint);
+	m_luaState.set_function("send", luaSend);
+	m_luaState.set_function("recv", luaRecv);
 }
 
 Proxy::Proxy()
@@ -191,12 +223,6 @@ void Proxy::SendPacket(std::vector<std::uint8_t> packet)
 void Proxy::ClearLog()
 {
 	g_packets.clear();
-}
-
-
-void Proxy::RegisterCommand(const std::string& command, CommandCallback callback)
-{
-	m_commands.emplace(command, callback);
 }
 
 void Proxy::Help()
@@ -401,15 +427,7 @@ std::string Proxy::ExecuteLua()
 	std::string output = "";
 	try
 	{
-		auto print = [&](sol::variadic_args args)
-		{
-			std::string printString = m_luaState["tostring"](args.get<sol::object>(0));
-			g_luaOutput += printString + "\n";
-		};
-
 		std::string luaCode(m_luaEditorData.data());
-		m_luaState.open_libraries(sol::lib::base, sol::lib::package, sol::lib::string, sol::lib::table, sol::lib::jit);
-		m_luaState.set_function("print", print);
 		sol::function_result result = m_luaState.script(luaCode);
 
 		if (!result.valid())
