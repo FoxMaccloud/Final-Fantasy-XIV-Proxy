@@ -67,10 +67,11 @@ public:
 
 private:
 	std::string ExecuteLua();
-	lua_State* m_luaState;
+	sol::state m_luaState;
 	Identifiers m_identifiers;
 	Keywords m_keywords;
 	std::vector<char> m_luaEditorData;
 	bool m_textChange;
 
 };
+

@@ -131,7 +131,6 @@ Proxy::Proxy()
 Proxy::~Proxy()
 {
 	ClearLog();
-	//lua_close(m_luaState);
 }
 
 
@@ -399,27 +398,32 @@ void Proxy::DrawConsole()
 
 std::string Proxy::ExecuteLua()
 {
-	auto print = [this](lua_State* L)
+	std::string output = "";
+	try
 	{
-		std::string printString = lua_tostring(L, 1);
-		g_luaOutput += printString + "\n";
-		return 1;
-	};
+		auto print = [&](sol::variadic_args args)
+		{
+			std::string printString = m_luaState["tostring"](args.get<sol::object>(0));
+			g_luaOutput += printString + "\n";
+		};
 
-	std::string luaCode(m_luaEditorData.data());
-	sol::state lua;
-	lua.open_libraries(sol::lib::base, sol::lib::package, sol::lib::string, sol::lib::table, sol::lib::jit);
-	lua.set_function("print", print);
-	sol::protected_function_result result = lua.script(luaCode);
-	
-	if (!result.valid())
-	{
-		sol::error error = result;
-		std::string errorMsg = error.what();
-		return "Lua error: " + errorMsg;
+		std::string luaCode(m_luaEditorData.data());
+		m_luaState.open_libraries(sol::lib::base, sol::lib::package, sol::lib::string, sol::lib::table, sol::lib::jit);
+		m_luaState.set_function("print", print);
+		sol::function_result result = m_luaState.script(luaCode);
+
+		if (!result.valid())
+		{
+			sol::error error = result;
+			std::string errorMsg = error.what();
+			return "Lua error: " + errorMsg;
+		}
+		output = m_luaState["tostring"](result.get<sol::object>());
 	}
-	
-	std::string output = lua["tostring"](result.get<sol::object>());
+	catch (const std::exception& e)
+	{
+		output = e.what();
+	}
 	return output;
 }
 
